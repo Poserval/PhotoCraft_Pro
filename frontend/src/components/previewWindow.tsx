@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImageState } from '../App';
-import { Upload } from 'lucide-react';
+import { Image } from 'lucide-react';
 
 interface PreviewWindowProps {
   imageState: ImageState | null;
@@ -11,12 +11,9 @@ const PreviewWindow: React.FC<PreviewWindowProps> = ({ imageState }) => {
     return (
       <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center bg-gray-50 min-h-[400px] flex items-center justify-center">
         <div className="text-gray-400">
-          <Upload className="mx-auto h-16 w-16 mb-4" />
+          <Image className="mx-auto h-16 w-16 mb-4" />
           <p className="text-lg font-medium text-gray-600">
-            Превью загруженного изображения
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Загрузите фото, чтобы увидеть его здесь
+            Загрузите изображение для редактирования
           </p>
         </div>
       </div>
