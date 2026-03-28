@@ -8,7 +8,7 @@ const Header: React.FC = () => {
           <img 
             src="/PhotoCraft_Pro/assets/icon-header.png" 
             alt="PhotoCraft Pro Logo" 
-            className="h-10 w-auto object-contain"
+            className="h-20 w-auto object-contain"
           />
         </div>
       </div>
