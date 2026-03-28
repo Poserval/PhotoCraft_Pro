@@ -66,33 +66,31 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 py-4">
-        {/* Заголовок и форматы */}
-        <div className="text-center mb-6">
-          <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
-            Умное редактирование фото с AI
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            JPG • JPEG • PNG • WEBP • GIF • BMP • TIFF • SVG
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          {/* Окно предпросмотра с кликом для загрузки */}
-          <div onClick={handlePreviewClick} className="cursor-pointer">
-            <PreviewWindow imageState={imageState} />
+      {/* Контент меняется в зависимости от активного меню */}
+      {!activeMenu ? (
+        // Режим: кнопки выбора (всё видно)
+        <main className="max-w-7xl mx-auto px-4 py-4">
+          <div className="text-center mb-6">
+            <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
+              Умное редактирование фото с AI
+            </h1>
+            <p className="text-xs text-gray-400 mt-1">
+              JPG • JPEG • PNG • WEBP • GIF • BMP • TIFF • SVG
+            </p>
           </div>
-          
-          {/* Информация о файле под окном */}
-          {imageState && (
-            <div className="mt-4 text-center text-sm text-gray-500">
-              <p>{imageState.name}</p>
-              <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div onClick={handlePreviewClick} className="cursor-pointer">
+              <PreviewWindow imageState={imageState} />
             </div>
-          )}
-          
-          {/* Если меню не активно - показываем кнопки выбора инструментов */}
-          {!activeMenu && (
+            
+            {imageState && (
+              <div className="mt-4 text-center text-sm text-gray-500">
+                <p>{imageState.name}</p>
+                <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+              </div>
+            )}
+            
             <div className="mt-8">
               <ImageUploader 
                 onImageUpload={handleImageUpload}
@@ -101,30 +99,42 @@ function App() {
                 hideButton={true}
               />
             </div>
-          )}
-          
-          {/* Если меню активно - показываем панель управления под информацией о файле */}
-          {activeMenu && (
-            <div className="mt-6">
-              {/* Верхняя панель: кнопка назад слева, название по центру */}
+          </div>
+        </main>
+      ) : (
+        // Режим: меню редактирования (ОПП поднят наверх, заголовок скрыт)
+        <main className="max-w-7xl mx-auto px-4 py-2">
+          <div className="bg-white rounded-2xl shadow-lg p-4">
+            {/* ОПП - компактный режим */}
+            <div onClick={handlePreviewClick} className="cursor-pointer">
+              <PreviewWindow imageState={imageState} compact={true} />
+            </div>
+            
+            {/* Информация о файле - компактная */}
+            {imageState && (
+              <div className="mt-2 text-center text-xs text-gray-400">
+                <p>{imageState.name} • {(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+              </div>
+            )}
+            
+            {/* Панель управления меню */}
+            <div className="mt-4">
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={handleBackToMenu}
-                  className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
                   title="Назад"
                 >
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 
-                <h2 className="text-lg font-semibold text-gray-800">{getMenuTitle()}</h2>
+                <h2 className="text-md font-semibold text-gray-800">{getMenuTitle()}</h2>
                 
-                {/* Пустой div для баланса */}
-                <div className="w-12"></div>
+                <div className="w-10"></div>
               </div>
               
-              {/* Содержимое меню (инструменты) */}
               <EditMenu 
                 isActive={activeMenu === 'edit'}
                 onToolSelect={() => {}}
@@ -134,9 +144,9 @@ function App() {
                 onTextAdd={() => {}}
               />
             </div>
-          )}
-        </div>
-      </main>
+          </div>
+        </main>
+      )}
 
       {/* Скрытый input для выбора файла */}
       <input
