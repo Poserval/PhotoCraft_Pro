@@ -36,8 +36,8 @@ function App() {
       
       <main className="max-w-7xl mx-auto px-4 py-4">
         {/* Красивый объемный заголовок в одну строку */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg whitespace-nowrap">
+        <div className="text-center mb-6 overflow-x-auto">
+          <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
             Умное редактирование фото с AI
           </h1>
         </div>
