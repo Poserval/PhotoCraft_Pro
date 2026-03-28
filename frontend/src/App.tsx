@@ -102,43 +102,41 @@ function App() {
               />
             </div>
           )}
+          
+          {/* Если меню активно - показываем панель управления под информацией о файле */}
+          {activeMenu && (
+            <div className="mt-6">
+              {/* Верхняя панель: кнопка назад слева, название по центру */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={handleBackToMenu}
+                  className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                  title="Назад"
+                >
+                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <h2 className="text-lg font-semibold text-gray-800">{getMenuTitle()}</h2>
+                
+                {/* Пустой div для баланса */}
+                <div className="w-12"></div>
+              </div>
+              
+              {/* Содержимое меню (инструменты) */}
+              <EditMenu 
+                isActive={activeMenu === 'edit'}
+                onToolSelect={() => {}}
+                onAdjustmentChange={() => {}}
+                onColorAdjustment={() => {}}
+                onEffectApply={() => {}}
+                onTextAdd={() => {}}
+              />
+            </div>
+          )}
         </div>
       </main>
-
-      {/* Нижнее меню - появляется при активном меню */}
-      {activeMenu && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            {/* Верхняя панель меню: кнопка назад слева, название по центру */}
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={handleBackToMenu}
-                className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-                title="Назад"
-              >
-                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              
-              <h2 className="text-lg font-semibold text-gray-800">{getMenuTitle()}</h2>
-              
-              {/* Пустой div для баланса (чтобы название было по центру) */}
-              <div className="w-12"></div>
-            </div>
-            
-            {/* Содержимое меню */}
-            <EditMenu 
-              isActive={activeMenu === 'edit'}
-              onToolSelect={() => {}}
-              onAdjustmentChange={() => {}}
-              onColorAdjustment={() => {}}
-              onEffectApply={() => {}}
-              onTextAdd={() => {}}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Скрытый input для выбора файла */}
       <input
