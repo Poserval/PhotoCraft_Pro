@@ -20,51 +20,43 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   return (
     <div className="flex flex-col items-center space-y-4">
-      {/* Ряд с кнопками меню */}
-      <div className="flex items-center justify-center space-x-2 md:space-x-4 w-full flex-wrap gap-2">
-        {/* Левые кнопки */}
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handleMenuClick('edit')}
-            className={`border font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base ${
-              activeMenu === 'edit' 
-                ? 'bg-blue-100 border-blue-300 text-blue-700' 
-                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Edit className="h-4 w-4" />
-            <span className="hidden sm:inline">Редактирование фото</span>
-            <span className="sm:hidden">Редакт</span>
-          </button>
-          <button
-            onClick={() => handleMenuClick('remove-bg')}
-            className="bg-white border border-gray-300 text-gray-600 font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base"
-          >
-            <Scissors className="h-4 w-4" />
-            <span className="hidden sm:inline">Удаление фона</span>
-            <span className="sm:hidden">Удалить фон</span>
-          </button>
-        </div>
-
-        {/* Правые кнопки */}
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handleMenuClick('inpaint')}
-            className="bg-white border border-gray-300 text-gray-600 font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base"
-          >
-            <Paintbrush className="h-4 w-4" />
-            <span className="hidden sm:inline">Дорисовка фото</span>
-            <span className="sm:hidden">Дорисовка</span>
-          </button>
-          <button
-            onClick={() => handleMenuClick('replace-bg')}
-            className="bg-white border border-gray-300 text-gray-600 font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base"
-          >
-            <Image className="h-4 w-4" />
-            <span className="hidden sm:inline">Замена фона</span>
-            <span className="sm:hidden">Замена фона</span>
-          </button>
-        </div>
+      {/* Ряд с кнопками меню - только иконки */}
+      <div className="flex items-center justify-center space-x-4 w-full">
+        <button
+          onClick={() => handleMenuClick('edit')}
+          className={`w-14 h-14 md:w-16 md:h-16 rounded-xl transition-all duration-200 flex items-center justify-center ${
+            activeMenu === 'edit' 
+              ? 'bg-blue-500 text-white shadow-lg scale-105' 
+              : 'bg-white border-2 border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md'
+          }`}
+          title="Редактирование фото"
+        >
+          <Edit className="h-6 w-6 md:h-7 md:w-7" />
+        </button>
+        
+        <button
+          onClick={() => handleMenuClick('remove-bg')}
+          className="w-14 h-14 md:w-16 md:h-16 rounded-xl transition-all duration-200 flex items-center justify-center bg-white border-2 border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md"
+          title="Удаление фона"
+        >
+          <Scissors className="h-6 w-6 md:h-7 md:w-7" />
+        </button>
+        
+        <button
+          onClick={() => handleMenuClick('inpaint')}
+          className="w-14 h-14 md:w-16 md:h-16 rounded-xl transition-all duration-200 flex items-center justify-center bg-white border-2 border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md"
+          title="Дорисовка фото"
+        >
+          <Paintbrush className="h-6 w-6 md:h-7 md:w-7" />
+        </button>
+        
+        <button
+          onClick={() => handleMenuClick('replace-bg')}
+          className="w-14 h-14 md:w-16 md:h-16 rounded-xl transition-all duration-200 flex items-center justify-center bg-white border-2 border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md"
+          title="Замена фона"
+        >
+          <Image className="h-6 w-6 md:h-7 md:w-7" />
+        </button>
       </div>
     </div>
   );
