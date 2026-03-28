@@ -65,10 +65,10 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      {/* Заголовок с форматами - показывается только когда нет активного меню */}
-      {!activeMenu && (
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <div className="text-center mb-4">
+      {/* Когда нет активного меню - обычный режим */}
+      {!activeMenu ? (
+        <main className="max-w-7xl mx-auto px-4 py-4">
+          <div className="text-center mb-6">
             <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
               Умное редактирование фото с AI
             </h1>
@@ -76,33 +76,19 @@ function App() {
               JPG • JPEG • PNG • WEBP • GIF • BMP • TIFF • SVG
             </p>
           </div>
-        </div>
-      )}
 
-      {/* Основной контент - фиксированная верхняя часть при активном меню */}
-      <div className={`max-w-7xl mx-auto px-4 ${activeMenu ? 'sticky top-0 z-10 bg-gray-50 pt-2' : ''}`}>
-        <div className={`bg-white rounded-2xl shadow-lg ${activeMenu ? 'p-4' : 'p-6'}`}>
-          {/* ОПП */}
-          <div onClick={handlePreviewClick} className="cursor-pointer">
-            <PreviewWindow imageState={imageState} compact={!!activeMenu} />
-          </div>
-          
-          {/* Информация о файле */}
-          {imageState && (
-            <div className={`mt-2 text-center ${activeMenu ? 'text-xs text-gray-400' : 'text-sm text-gray-500'}`}>
-              {activeMenu ? (
-                <p>{imageState.name} • {(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
-              ) : (
-                <>
-                  <p>{imageState.name}</p>
-                  <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
-                </>
-              )}
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div onClick={handlePreviewClick} className="cursor-pointer">
+              <PreviewWindow imageState={imageState} />
             </div>
-          )}
-          
-          {/* Кнопки выбора инструментов (только когда нет активного меню) */}
-          {!activeMenu && (
+            
+            {imageState && (
+              <div className="mt-4 text-center text-sm text-gray-500">
+                <p>{imageState.name}</p>
+                <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+              </div>
+            )}
+            
             <div className="mt-8">
               <ImageUploader 
                 onImageUpload={handleImageUpload}
@@ -111,29 +97,51 @@ function App() {
                 hideButton={true}
               />
             </div>
-          )}
-          
-          {/* Панель управления меню (только когда есть активное меню) */}
-          {activeMenu && (
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  onClick={handleBackToMenu}
-                  className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-                  title="Назад"
-                >
-                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
+          </div>
+        </main>
+      ) : (
+        // Когда активное меню - фиксированная верхняя часть и прокручиваемые подменю
+        <div className="h-screen flex flex-col">
+          {/* Фиксированная верхняя часть */}
+          <div className="flex-shrink-0 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
+              <div className="bg-white rounded-2xl shadow-lg p-4">
+                {/* ОПП */}
+                <div onClick={handlePreviewClick} className="cursor-pointer">
+                  <PreviewWindow imageState={imageState} compact={true} />
+                </div>
                 
-                <h2 className="text-md font-semibold text-gray-800">{getMenuTitle()}</h2>
+                {/* Информация о файле */}
+                {imageState && (
+                  <div className="mt-2 text-center text-xs text-gray-400">
+                    <p>{imageState.name} • {(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+                  </div>
+                )}
                 
-                <div className="w-10"></div>
+                {/* Название меню и кнопка назад */}
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    onClick={handleBackToMenu}
+                    className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                    title="Назад"
+                  >
+                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  
+                  <h2 className="text-md font-semibold text-gray-800">{getMenuTitle()}</h2>
+                  
+                  <div className="w-10"></div>
+                </div>
               </div>
-              
-              {/* Контейнер для меню с прокруткой */}
-              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+            </div>
+          </div>
+          
+          {/* Прокручиваемая область с подменю */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-7xl mx-auto px-4 pb-4">
+              <div className="bg-white rounded-2xl shadow-lg p-4">
                 <EditMenu 
                   isActive={activeMenu === 'edit'}
                   onToolSelect={() => {}}
@@ -144,9 +152,9 @@ function App() {
                 />
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Скрытый input для выбора файла */}
       <input
