@@ -15,7 +15,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   hideButton = false
 }) => {
   const handleMenuClick = (menuName: string) => {
-    setActiveMenu(activeMenu === menuName ? null : menuName);
+    setActiveMenu(menuName);
   };
 
   return (
@@ -24,11 +24,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       <div className="flex items-center justify-center space-x-4 w-full">
         <button
           onClick={() => handleMenuClick('edit')}
-          className={`w-14 h-14 md:w-16 md:h-16 rounded-xl transition-all duration-200 flex items-center justify-center ${
-            activeMenu === 'edit' 
-              ? 'bg-blue-500 text-white shadow-lg scale-105' 
-              : 'bg-white border-2 border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md'
-          }`}
+          className="w-14 h-14 md:w-16 md:h-16 rounded-xl transition-all duration-200 flex items-center justify-center bg-white border-2 border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md"
           title="Редактирование фото"
         >
           <Edit className="h-6 w-6 md:h-7 md:w-7" />
