@@ -34,10 +34,10 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Красивый объемный заголовок */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg">
+      <main className="max-w-7xl mx-auto px-4 py-4">
+        {/* Красивый объемный заголовок в одну строку */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg whitespace-nowrap">
             Умное редактирование фото с AI
           </h1>
         </div>
