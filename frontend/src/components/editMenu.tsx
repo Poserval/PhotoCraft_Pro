@@ -1,4 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { 
+  Crop, 
+  Settings, 
+  Palette, 
+  Filter, 
+  Type, 
+  Brush, 
+  MoreHorizontal,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
 
 interface EditMenuProps {
   isActive: boolean;
@@ -9,6 +20,13 @@ interface EditMenuProps {
   onTextAdd: (textConfig: any) => void;
 }
 
+interface MenuSection {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  isExpanded: boolean;
+}
+
 const EditMenu: React.FC<EditMenuProps> = ({ 
   isActive,
   onToolSelect,
@@ -17,13 +35,57 @@ const EditMenu: React.FC<EditMenuProps> = ({
   onEffectApply,
   onTextAdd
 }) => {
+  const [sections, setSections] = useState<MenuSection[]>([
+    { id: 'crop', title: 'Кадрирование и трансформация', icon: Crop, isExpanded: false },
+    { id: 'correction', title: 'Коррекция изображения', icon: Settings, isExpanded: false },
+    { id: 'color', title: 'Цветокоррекция', icon: Palette, isExpanded: false },
+    { id: 'effects', title: 'Эффекты и фильтры', icon: Filter, isExpanded: false },
+    { id: 'text', title: 'Текст', icon: Type, isExpanded: false },
+    { id: 'tools', title: 'Инструменты', icon: Brush, isExpanded: false },
+    { id: 'more', title: 'Дополнительно', icon: MoreHorizontal, isExpanded: false }
+  ]);
+
+  const toggleSection = (id: string) => {
+    setSections(prev =>
+      prev.map(section =>
+        section.id === id
+          ? { ...section, isExpanded: !section.isExpanded }
+          : section
+      )
+    );
+  };
+
   if (!isActive) return null;
 
   return (
-    <div className="space-y-4">
-      <p className="text-gray-500 text-center py-8">
-        Меню редактирования (функционал в разработке)
-      </p>
+    <div className="space-y-3">
+      {sections.map((section) => (
+        <div key={section.id} className="rounded-xl border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection(section.id)}
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <section.icon className="h-5 w-5 text-gray-500" />
+              <span className="font-medium text-gray-700">{section.title}</span>
+            </div>
+            {section.isExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+          
+          {/* Контент раздела - пока пустой, будет заполняться позже */}
+          {section.isExpanded && (
+            <div className="p-4 bg-gray-50 border-t border-gray-100">
+              <p className="text-sm text-gray-400 text-center py-4">
+                Инструменты раздела "{section.title}" в разработке
+              </p>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
