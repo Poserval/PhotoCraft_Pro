@@ -66,7 +66,7 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 py-4 pb-24">
+      <main className="max-w-7xl mx-auto px-4 py-4">
         {/* Заголовок и форматы */}
         <div className="text-center mb-6">
           <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
@@ -105,19 +105,26 @@ function App() {
         </div>
       </main>
 
-      {/* Нижнее меню - фиксированное, не скрывается при скролле */}
+      {/* Нижнее меню - появляется при активном меню */}
       {activeMenu && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
           <div className="max-w-7xl mx-auto px-4 py-4">
+            {/* Верхняя панель меню: кнопка назад слева, название по центру */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">{getMenuTitle()}</h2>
               <button
                 onClick={handleBackToMenu}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors flex items-center space-x-2"
+                className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                title="Назад"
               >
-                <span>←</span>
-                <span>Назад</span>
+                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
+              
+              <h2 className="text-lg font-semibold text-gray-800">{getMenuTitle()}</h2>
+              
+              {/* Пустой div для баланса (чтобы название было по центру) */}
+              <div className="w-12"></div>
             </div>
             
             {/* Содержимое меню */}
