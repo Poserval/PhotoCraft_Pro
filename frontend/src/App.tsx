@@ -51,10 +51,14 @@ function App() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 py-4">
-        <div className="text-center mb-6 overflow-x-auto">
+        {/* Заголовок и форматы */}
+        <div className="text-center mb-6">
           <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
             Умное редактирование фото с AI
           </h1>
+          <p className="text-xs text-gray-400 mt-1">
+            JPG • JPEG • PNG • WEBP • GIF • BMP • TIFF • SVG
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-6">
