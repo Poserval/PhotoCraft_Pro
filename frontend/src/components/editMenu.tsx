@@ -8,7 +8,11 @@ import {
   Brush, 
   MoreHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Move,
+  RotateCw,
+  FlipHorizontal,
+  Ruler
 } from 'lucide-react';
 
 interface EditMenuProps {
@@ -21,6 +25,13 @@ interface EditMenuProps {
 }
 
 interface MenuSection {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  isExpanded: boolean;
+}
+
+interface CropSubItem {
   id: string;
   title: string;
   icon: React.ElementType;
@@ -45,6 +56,27 @@ const EditMenu: React.FC<EditMenuProps> = ({
     { id: 'more', title: 'Дополнительно', icon: MoreHorizontal, isExpanded: false }
   ]);
 
+  // Состояние для подменю раздела "Кадрирование"
+  const [cropSubItems, setCropSubItems] = useState<CropSubItem[]>([
+    { id: 'crop-aspect', title: 'Обрезка', icon: Crop, isExpanded: false },
+    { id: 'rotate', title: 'Поворот', icon: RotateCw, isExpanded: false },
+    { id: 'flip', title: 'Отражение', icon: FlipHorizontal, isExpanded: false },
+    { id: 'resize', title: 'Размер', icon: Ruler, isExpanded: false }
+  ]);
+
+  const [selectedAspect, setSelectedAspect] = useState<string>('free');
+
+  const aspectRatios = [
+    { id: 'free', label: 'Свободный', icon: '✂️' },
+    { id: '1:1', label: '1:1', icon: '⬜' },
+    { id: '2:3', label: '2:3', icon: '▯' },
+    { id: '3:2', label: '3:2', icon: '▮' },
+    { id: '3:4', label: '3:4', icon: '▯' },
+    { id: '4:3', label: '4:3', icon: '▮' },
+    { id: '9:16', label: '9:16', icon: '▯' },
+    { id: '16:9', label: '16:9', icon: '▮' }
+  ];
+
   const toggleSection = (id: string) => {
     setSections(prev =>
       prev.map(section =>
@@ -55,7 +87,74 @@ const EditMenu: React.FC<EditMenuProps> = ({
     );
   };
 
+  const toggleCropSubItem = (id: string) => {
+    setCropSubItems(prev =>
+      prev.map(item =>
+        item.id === id
+          ? { ...item, isExpanded: !item.isExpanded }
+          : { ...item, isExpanded: false } // Закрываем другие
+      )
+    );
+  };
+
   if (!isActive) return null;
+
+  // Рендер содержимого раздела "Кадрирование"
+  const renderCropContent = () => {
+    return (
+      <div className="space-y-2">
+        {cropSubItems.map((item) => (
+          <div key={item.id} className="border-b border-gray-100 last:border-0">
+            <button
+              onClick={() => toggleCropSubItem(item.id)}
+              className="w-full flex items-center justify-between py-2 px-1 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <item.icon className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-700">{item.title}</span>
+              </div>
+              {item.isExpanded ? (
+                <ChevronUp className="h-4 w-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+            
+            {/* Содержимое подменю "Обрезка" */}
+            {item.id === 'crop-aspect' && item.isExpanded && (
+              <div className="pl-7 pb-3 pr-1">
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  {aspectRatios.map((ratio) => (
+                    <button
+                      key={ratio.id}
+                      onClick={() => setSelectedAspect(ratio.id)}
+                      className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center transition-all ${
+                        selectedAspect === ratio.id
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="text-lg mb-1">{ratio.icon}</span>
+                      <span className="text-xs font-medium">{ratio.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Заглушки для других подменю */}
+            {item.id !== 'crop-aspect' && item.isExpanded && (
+              <div className="pl-7 pb-3">
+                <p className="text-xs text-gray-400 py-2 text-center">
+                  Инструмент "{item.title}" в разработке
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -78,12 +177,16 @@ const EditMenu: React.FC<EditMenuProps> = ({
             </div>
           </button>
           
-          {/* Контент раздела - пока пустой, будет заполняться позже */}
+          {/* Контент раздела */}
           {section.isExpanded && (
-            <div className="p-4 bg-gray-50 border-t border-gray-100">
-              <p className="text-sm text-gray-400 text-center py-4">
-                Инструменты раздела "{section.title}" в разработке
-              </p>
+            <div className="p-3 bg-gray-50 border-t border-gray-100">
+              {section.id === 'crop' ? (
+                renderCropContent()
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4">
+                  Инструменты раздела "{section.title}" в разработке
+                </p>
+              )}
             </div>
           )}
         </div>
