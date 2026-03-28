@@ -66,11 +66,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Информация о форматах */}
-      <p className="text-xs text-gray-400 text-center">
-        JPG, PNG, WEBP, GIF, BMP, TIFF, SVG
-      </p>
     </div>
   );
 };
