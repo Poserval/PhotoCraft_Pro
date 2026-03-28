@@ -36,6 +36,7 @@ jobs:
         run: |
           rm -rf docs
           cp -r frontend/dist docs
+          cp -r assets docs/ 2>/dev/null || true
           
       - name: Commit and push
         run: |
