@@ -63,17 +63,19 @@ const EditMenu: React.FC<EditMenuProps> = ({
         <div key={section.id} className="rounded-xl border border-gray-200 overflow-hidden">
           <button
             onClick={() => toggleSection(section.id)}
-            className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
+            className="w-full flex items-center justify-center p-4 bg-white hover:bg-gray-50 transition-colors relative"
           >
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center space-x-2">
               <section.icon className="h-5 w-5 text-gray-500" />
               <span className="font-medium text-gray-700">{section.title}</span>
             </div>
-            {section.isExpanded ? (
-              <ChevronUp className="h-5 w-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-gray-400" />
-            )}
+            <div className="absolute right-4">
+              {section.isExpanded ? (
+                <ChevronUp className="h-5 w-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400" />
+              )}
+            </div>
           </button>
           
           {/* Контент раздела - пока пустой, будет заполняться позже */}
