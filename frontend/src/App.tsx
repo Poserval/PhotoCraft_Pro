@@ -1,78 +1,97 @@
-import React from 'react';
-import { Edit, Scissors, Paintbrush, Image } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import Header from './components/Header';
+import PreviewWindow from './components/PreviewWindow';
+import ImageUploader from './components/ImageUploader';
 
-interface ImageUploaderProps {
-  onImageUpload: (file: File) => void;
-  activeMenu: string | null;
-  setActiveMenu: (menu: string | null) => void;
-  hideButton?: boolean;
+export interface ImageState {
+  original: string;
+  current: string;
+  name: string;
+  size: number;
+  format: string;
+  edits: any;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ 
-  onImageUpload, 
-  activeMenu, 
-  setActiveMenu,
-  hideButton = false
-}) => {
-  const handleMenuClick = (menuName: string) => {
-    setActiveMenu(activeMenu === menuName ? null : menuName);
+function App() {
+  const [imageState, setImageState] = useState<ImageState | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const format = file.type.split('/')[1].toUpperCase();
+      setImageState({
+        original: dataUrl,
+        current: dataUrl,
+        name: file.name,
+        size: file.size,
+        format: format,
+        edits: {}
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePreviewClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageUpload(file);
+      e.target.value = '';
+    }
   };
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      {/* Ряд с кнопками меню */}
-      <div className="flex items-center justify-center space-x-2 md:space-x-4 w-full flex-wrap gap-2">
-        {/* Левые кнопки */}
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handleMenuClick('edit')}
-            className={`border font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base ${
-              activeMenu === 'edit' 
-                ? 'bg-blue-100 border-blue-300 text-blue-700' 
-                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Edit className="h-4 w-4" />
-            <span className="hidden sm:inline">Редактирование фото</span>
-            <span className="sm:hidden">Редакт</span>
-          </button>
-          <button
-            onClick={() => handleMenuClick('remove-bg')}
-            className="bg-white border border-gray-300 text-gray-600 font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base"
-          >
-            <Scissors className="h-4 w-4" />
-            <span className="hidden sm:inline">Удаление фона</span>
-            <span className="sm:hidden">Удалить фон</span>
-          </button>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      <main className="max-w-7xl mx-auto px-4 py-4">
+        <div className="text-center mb-6 overflow-x-auto">
+          <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
+            Умное редактирование фото с AI
+          </h1>
         </div>
 
-        {/* Правые кнопки */}
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handleMenuClick('inpaint')}
-            className="bg-white border border-gray-300 text-gray-600 font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base"
-          >
-            <Paintbrush className="h-4 w-4" />
-            <span className="hidden sm:inline">Дорисовка фото</span>
-            <span className="sm:hidden">Дорисовка</span>
-          </button>
-          <button
-            onClick={() => handleMenuClick('replace-bg')}
-            className="bg-white border border-gray-300 text-gray-600 font-medium py-2 px-3 md:py-3 md:px-6 rounded-lg transition-colors flex items-center space-x-1 md:space-x-2 text-sm md:text-base"
-          >
-            <Image className="h-4 w-4" />
-            <span className="hidden sm:inline">Замена фона</span>
-            <span className="sm:hidden">Замена фона</span>
-          </button>
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          {/* Окно предпросмотра с кликом для загрузки */}
+          <div onClick={handlePreviewClick} className="cursor-pointer">
+            <PreviewWindow imageState={imageState} />
+          </div>
+          
+          {/* Информация о файле под окном */}
+          {imageState && (
+            <div className="mt-4 text-center text-sm text-gray-500">
+              <p>{imageState.name}</p>
+              <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+            </div>
+          )}
+          
+          <div className="mt-8">
+            <ImageUploader 
+              onImageUpload={handleImageUpload}
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+              hideButton={true}
+            />
+          </div>
         </div>
-      </div>
+      </main>
 
-      {/* Информация о форматах */}
-      <p className="text-xs text-gray-400 text-center">
-        JPG, PNG, WEBP, GIF, BMP, TIFF, SVG
-      </p>
+      {/* Скрытый input для выбора файла */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff,.tif,.svg"
+        onChange={handleFileInputChange}
+      />
     </div>
   );
-};
+}
 
-export default ImageUploader;
+export default App;
