@@ -1,11 +1,14 @@
 {
+  "homepage": "https://Poserval.github.io/PhotoCraft_Pro",
   "name": "ai-photo-studio-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -21,6 +24,7 @@
     "vite": "^4.5.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5"
+    "tailwindcss": "^3.3.5",
+    "gh-pages": "^5.0.0"
   }
 }
