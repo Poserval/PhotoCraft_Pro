@@ -34,14 +34,12 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Красивый объемный заголовок */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg">
             Умное редактирование фото с AI
           </h1>
-          <p className="text-lg text-gray-600">
-            Загрузите фотографию для редактирования
-          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-6">
