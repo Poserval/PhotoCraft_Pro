@@ -51,7 +51,6 @@ function App() {
     setActiveMenu(null);
   };
 
-  // Получаем название активного меню
   const getMenuTitle = () => {
     switch (activeMenu) {
       case 'edit': return 'Редактирование фото';
@@ -66,11 +65,10 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      {/* Контент меняется в зависимости от активного меню */}
-      {!activeMenu ? (
-        // Режим: кнопки выбора (всё видно)
-        <main className="max-w-7xl mx-auto px-4 py-4">
-          <div className="text-center mb-6">
+      {/* Заголовок с форматами - показывается только когда нет активного меню */}
+      {!activeMenu && (
+        <div className="max-w-7xl mx-auto px-4 pt-4">
+          <div className="text-center mb-4">
             <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg text-[clamp(1rem,5vw,1.5rem)] whitespace-nowrap">
               Умное редактирование фото с AI
             </h1>
@@ -78,19 +76,33 @@ function App() {
               JPG • JPEG • PNG • WEBP • GIF • BMP • TIFF • SVG
             </p>
           </div>
+        </div>
+      )}
 
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div onClick={handlePreviewClick} className="cursor-pointer">
-              <PreviewWindow imageState={imageState} />
+      {/* Основной контент - фиксированная верхняя часть при активном меню */}
+      <div className={`max-w-7xl mx-auto px-4 ${activeMenu ? 'sticky top-0 z-10 bg-gray-50 pt-2' : ''}`}>
+        <div className={`bg-white rounded-2xl shadow-lg ${activeMenu ? 'p-4' : 'p-6'}`}>
+          {/* ОПП */}
+          <div onClick={handlePreviewClick} className="cursor-pointer">
+            <PreviewWindow imageState={imageState} compact={!!activeMenu} />
+          </div>
+          
+          {/* Информация о файле */}
+          {imageState && (
+            <div className={`mt-2 text-center ${activeMenu ? 'text-xs text-gray-400' : 'text-sm text-gray-500'}`}>
+              {activeMenu ? (
+                <p>{imageState.name} • {(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+              ) : (
+                <>
+                  <p>{imageState.name}</p>
+                  <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
+                </>
+              )}
             </div>
-            
-            {imageState && (
-              <div className="mt-4 text-center text-sm text-gray-500">
-                <p>{imageState.name}</p>
-                <p>{(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
-              </div>
-            )}
-            
+          )}
+          
+          {/* Кнопки выбора инструментов (только когда нет активного меню) */}
+          {!activeMenu && (
             <div className="mt-8">
               <ImageUploader 
                 onImageUpload={handleImageUpload}
@@ -99,25 +111,10 @@ function App() {
                 hideButton={true}
               />
             </div>
-          </div>
-        </main>
-      ) : (
-        // Режим: меню редактирования (ОПП поднят наверх, заголовок скрыт)
-        <main className="max-w-7xl mx-auto px-4 py-2">
-          <div className="bg-white rounded-2xl shadow-lg p-4">
-            {/* ОПП - компактный режим */}
-            <div onClick={handlePreviewClick} className="cursor-pointer">
-              <PreviewWindow imageState={imageState} compact={true} />
-            </div>
-            
-            {/* Информация о файле - компактная */}
-            {imageState && (
-              <div className="mt-2 text-center text-xs text-gray-400">
-                <p>{imageState.name} • {(imageState.size / 1024 / 1024).toFixed(2)} MB • {imageState.format}</p>
-              </div>
-            )}
-            
-            {/* Панель управления меню */}
+          )}
+          
+          {/* Панель управления меню (только когда есть активное меню) */}
+          {activeMenu && (
             <div className="mt-4">
               <div className="flex items-center justify-between mb-4">
                 <button
@@ -135,18 +132,21 @@ function App() {
                 <div className="w-10"></div>
               </div>
               
-              <EditMenu 
-                isActive={activeMenu === 'edit'}
-                onToolSelect={() => {}}
-                onAdjustmentChange={() => {}}
-                onColorAdjustment={() => {}}
-                onEffectApply={() => {}}
-                onTextAdd={() => {}}
-              />
+              {/* Контейнер для меню с прокруткой */}
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+                <EditMenu 
+                  isActive={activeMenu === 'edit'}
+                  onToolSelect={() => {}}
+                  onAdjustmentChange={() => {}}
+                  onColorAdjustment={() => {}}
+                  onEffectApply={() => {}}
+                  onTextAdd={() => {}}
+                />
+              </div>
             </div>
-          </div>
-        </main>
-      )}
+          )}
+        </div>
+      </div>
 
       {/* Скрытый input для выбора файла */}
       <input
