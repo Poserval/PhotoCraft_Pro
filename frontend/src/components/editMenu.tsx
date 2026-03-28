@@ -36,10 +36,10 @@ const EditMenu: React.FC<EditMenuProps> = ({
   onTextAdd
 }) => {
   const [sections, setSections] = useState<MenuSection[]>([
-    { id: 'crop', title: 'Кадрирование и трансформация', icon: Crop, isExpanded: false },
-    { id: 'correction', title: 'Коррекция изображения', icon: Settings, isExpanded: false },
-    { id: 'color', title: 'Цветокоррекция', icon: Palette, isExpanded: false },
-    { id: 'effects', title: 'Эффекты и фильтры', icon: Filter, isExpanded: false },
+    { id: 'crop', title: 'Кадрирование', icon: Crop, isExpanded: false },
+    { id: 'correction', title: 'Коррекция', icon: Settings, isExpanded: false },
+    { id: 'color', title: 'Цвет', icon: Palette, isExpanded: false },
+    { id: 'effects', title: 'Эффекты', icon: Filter, isExpanded: false },
     { id: 'text', title: 'Текст', icon: Type, isExpanded: false },
     { id: 'tools', title: 'Инструменты', icon: Brush, isExpanded: false },
     { id: 'more', title: 'Дополнительно', icon: MoreHorizontal, isExpanded: false }
@@ -63,13 +63,13 @@ const EditMenu: React.FC<EditMenuProps> = ({
         <div key={section.id} className="rounded-xl border border-gray-200 overflow-hidden">
           <button
             onClick={() => toggleSection(section.id)}
-            className="w-full flex items-center justify-center p-3 bg-white hover:bg-gray-50 transition-colors relative"
+            className="w-full flex items-center justify-between p-3 bg-white hover:bg-gray-50 transition-colors"
           >
-            <div className="flex items-center justify-center space-x-2">
-              <section.icon className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">{section.title}</span>
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <section.icon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-700 truncate">{section.title}</span>
             </div>
-            <div className="absolute right-3">
+            <div className="flex-shrink-0 ml-2">
               {section.isExpanded ? (
                 <ChevronUp className="h-4 w-4 text-gray-400" />
               ) : (
