@@ -4,13 +4,16 @@ import PreviewWindow from './components/PreviewWindow';
 import ImageUploader from './components/ImageUploader';
 
 export interface ImageState {
-  original: string; // Data URL
-  name: string; // Имя файла
-  size: number; // Размер файла
+  original: string;
+  current: string;
+  name: string;
+  size: number;
+  edits: any;
 }
 
 function App() {
   const [imageState, setImageState] = useState<ImageState | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const handleImageUpload = (file: File) => {
     const reader = new FileReader();
@@ -18,8 +21,10 @@ function App() {
       const dataUrl = e.target?.result as string;
       setImageState({
         original: dataUrl,
+        current: dataUrl,
         name: file.name,
-        size: file.size
+        size: file.size,
+        edits: {}
       });
     };
     reader.readAsDataURL(file);
@@ -29,20 +34,25 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Умное редактирование фото с AI
           </h1>
           <p className="text-lg text-gray-600">
-            Загрузите фотографию для удаления фона и других преобразований
+            Загрузите фотографию для редактирования
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <PreviewWindow imageState={imageState} />
+          
           <div className="mt-8">
-            <ImageUploader onImageUpload={handleImageUpload} />
+            <ImageUploader 
+              onImageUpload={handleImageUpload}
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+            />
           </div>
         </div>
       </main>
