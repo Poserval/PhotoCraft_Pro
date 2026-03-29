@@ -118,7 +118,7 @@
             object-fit: contain;
             border-radius: 18px;
             display: block;
-            transform-origin: 0 0;
+            transform-origin: center center;
             cursor: grab;
             will-change: transform;
         }
@@ -425,10 +425,6 @@
     // Переменные для жестов
     let initialDistance = 0;
     let initialScale = 1;
-    let initialTranslateX = 0;
-    let initialTranslateY = 0;
-    let initialCenterX = 0;
-    let initialCenterY = 0;
     let isZooming = false;
     let isDragging = false;
     let dragStartX = 0;
@@ -498,8 +494,8 @@
         applyTransform();
     }
     
-    // Масштабирование относительно центра между пальцами
-    function zoomAtPoint(newScale, centerX, centerY) {
+    // Масштабирование от центра
+    function zoomFromCenter(newScale) {
         if (!previewImg.complete || previewImg.naturalWidth === 0) return;
         
         const oldScale = currentScale;
@@ -507,18 +503,13 @@
         
         if (newScaleClamped === oldScale) return;
         
-        const container = previewArea;
-        const containerRect = container.getBoundingClientRect();
+        // Масштабируем от центра
+        const scaleRatio = newScaleClamped / oldScale;
         
-        // Координаты точки в системе координат изображения
-        const imgX = (centerX - containerRect.left - containerRect.width/2 - currentTranslateX) / oldScale;
-        const imgY = (centerY - containerRect.top - containerRect.height/2 - currentTranslateY) / oldScale;
-        
+        // Смещение также масштабируется от центра
+        currentTranslateX = currentTranslateX * scaleRatio;
+        currentTranslateY = currentTranslateY * scaleRatio;
         currentScale = newScaleClamped;
-        
-        // Новое смещение, чтобы точка осталась на месте
-        currentTranslateX = (centerX - containerRect.left - containerRect.width/2) - imgX * currentScale;
-        currentTranslateY = (centerY - containerRect.top - containerRect.height/2) - imgY * currentScale;
         
         applyTransform();
         clampTranslate();
@@ -533,14 +524,6 @@
             const dy = touch1.clientY - touch2.clientY;
             initialDistance = Math.hypot(dx, dy);
             initialScale = currentScale;
-            initialTranslateX = currentTranslateX;
-            initialTranslateY = currentTranslateY;
-            
-            const centerX = (touch1.clientX + touch2.clientX) / 2;
-            const centerY = (touch1.clientY + touch2.clientY) / 2;
-            initialCenterX = centerX;
-            initialCenterY = centerY;
-            
             isZooming = true;
             isDragging = false;
         } else if (e.touches.length === 1) {
@@ -563,10 +546,7 @@
             const newDistance = Math.hypot(dx, dy);
             const newScale = initialScale * (newDistance / initialDistance);
             
-            const centerX = (touch1.clientX + touch2.clientX) / 2;
-            const centerY = (touch1.clientY + touch2.clientY) / 2;
-            
-            zoomAtPoint(newScale, centerX, centerY);
+            zoomFromCenter(newScale);
         } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
             e.preventDefault();
             currentTranslateX = e.touches[0].clientX - dragStartX;
