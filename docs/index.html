@@ -14,10 +14,9 @@
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f9fafb;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
 
         .header {
@@ -62,23 +61,19 @@
             letter-spacing: 0.3px;
         }
 
-        /* Основной контент — занимает всё оставшееся место */
+        /* Основной контент */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             padding: 16px;
-            min-height: 0;
-            overflow: hidden;
         }
 
-        /* Область ОПП — занимает всё доступное место */
+        /* Область ОПП */
         .preview-wrapper {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 0;
-            overflow: hidden;
+            flex: 1;
         }
         
         .preview-area {
@@ -90,9 +85,8 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 300px;
             flex: 1;
-            min-height: 0;
-            overflow: hidden;
         }
         .preview-area:active {
             background: #e5e7eb;
@@ -106,22 +100,20 @@
         }
         .preview-image {
             max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
+            max-height: 60vh;
             object-fit: contain;
             border-radius: 12px;
             display: block;
+            margin: 0 auto;
         }
         .file-info {
             margin-top: 12px;
             font-size: 12px;
             color: #6b7280;
             text-align: center;
-            flex-shrink: 0;
         }
 
-        /* Кнопки — фиксированный размер */
+        /* Кнопки */
         .tools-row {
             display: flex;
             justify-content: center;
@@ -269,6 +261,13 @@
             color: #6b7280;
             font-size: 13px;
         }
+        
+        /* Адаптация для мобильных */
+        @media (max-width: 768px) {
+            .preview-image {
+                max-height: 50vh;
+            }
+        }
     </style>
 </head>
 <body>
@@ -338,7 +337,6 @@
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const fileInfoDiv = document.getElementById('fileInfo');
     const slogan = document.getElementById('slogan');
-    const previewArea = document.getElementById('uploadZone');
     
     const menuPreviewImg = document.getElementById('menuPreviewImg');
     const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
@@ -362,9 +360,6 @@
         menuFileInfo.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
         
         slogan.classList.add('hidden');
-        
-        // Изображение уже вписано в контейнер благодаря CSS
-        // Никаких дополнительных ограничений не нужно
     }
 
     function handleFile(file) {
