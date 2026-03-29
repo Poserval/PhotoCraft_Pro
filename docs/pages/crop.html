@@ -10,16 +10,24 @@
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: #f9fafb;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
+        /* Основной контент - flex контейнер */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             padding: 16px;
+            overflow: hidden;
+        }
+
+        /* Фиксированная верхняя часть */
+        .fixed-top {
+            flex-shrink: 0;
         }
 
         /* Превью */
@@ -49,11 +57,15 @@
 
         /* Панель управления */
         .control-panel {
-            margin-top: 20px;
+            margin-top: 16px;
             background: white;
             border-radius: 20px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
         }
         .panel-header {
             display: flex;
@@ -62,6 +74,7 @@
             padding: 12px 16px;
             background: #f9fafb;
             border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
         }
         .back-btn, .save-btn {
             width: 44px;
@@ -78,6 +91,13 @@
         }
         .save-btn { background: #3b82f6; color: white; }
         .panel-title { font-size: 18px; font-weight: 600; color: #1f2937; }
+
+        /* Прокручиваемая область с выпадающими меню */
+        .scrollable-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
 
         /* Выпадающие меню */
         .accordion-item {
@@ -175,19 +195,22 @@
 <body>
 
 <div class="main-content">
-    <!-- Превью -->
-    <div class="preview-wrapper" id="previewWrapper">
-        <img id="previewImg" class="preview-image" src="" alt="preview">
-        <div id="cropOverlay" class="crop-overlay"></div>
-        <div id="cropFrame" class="crop-frame">
-            <div class="crop-handle nw"></div><div class="crop-handle n"></div><div class="crop-handle ne"></div>
-            <div class="crop-handle w"></div><div class="crop-handle e"></div>
-            <div class="crop-handle sw"></div><div class="crop-handle s"></div><div class="crop-handle se"></div>
+    <!-- Фиксированная верхняя часть -->
+    <div class="fixed-top">
+        <!-- Превью -->
+        <div class="preview-wrapper" id="previewWrapper">
+            <img id="previewImg" class="preview-image" src="" alt="preview">
+            <div id="cropOverlay" class="crop-overlay"></div>
+            <div id="cropFrame" class="crop-frame">
+                <div class="crop-handle nw"></div><div class="crop-handle n"></div><div class="crop-handle ne"></div>
+                <div class="crop-handle w"></div><div class="crop-handle e"></div>
+                <div class="crop-handle sw"></div><div class="crop-handle s"></div><div class="crop-handle se"></div>
+            </div>
         </div>
+        <div id="fileInfo" class="file-info"></div>
     </div>
-    <div id="fileInfo" class="file-info"></div>
 
-    <!-- Панель управления -->
+    <!-- Панель управления с прокруткой -->
     <div class="control-panel">
         <div class="panel-header">
             <button class="back-btn" id="backBtn">←</button>
@@ -195,64 +218,67 @@
             <button class="save-btn" id="saveBtn">💾</button>
         </div>
 
-        <!-- Выпадающее меню: Кадрирование -->
-        <div class="accordion-item">
-            <button class="accordion-header" data-accordion="crop">
-                <span>✂️ Кадрирование</span>
-                <span class="accordion-arrow">▼</span>
-            </button>
-            <div class="accordion-content" id="accordion-crop">
-                <div class="aspect-grid" id="aspectGrid">
-                    <button class="aspect-btn" data-aspect="free">✂️</button>
-                    <button class="aspect-btn selected" data-aspect="1:1">1:1</button>
-                    <button class="aspect-btn" data-aspect="2:3">2:3</button>
-                    <button class="aspect-btn" data-aspect="3:2">3:2</button>
-                    <button class="aspect-btn" data-aspect="3:4">3:4</button>
-                    <button class="aspect-btn" data-aspect="4:3">4:3</button>
-                    <button class="aspect-btn" data-aspect="9:16">9:16</button>
-                    <button class="aspect-btn" data-aspect="16:9">16:9</button>
-                </div>
-                <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                    👆 Потяните за уголки рамки | 🖐️ Перемещайте увеличенное фото
+        <!-- Прокручиваемая область -->
+        <div class="scrollable-area">
+            <!-- Выпадающее меню: Кадрирование -->
+            <div class="accordion-item">
+                <button class="accordion-header" data-accordion="crop">
+                    <span>✂️ Кадрирование</span>
+                    <span class="accordion-arrow">▼</span>
+                </button>
+                <div class="accordion-content" id="accordion-crop">
+                    <div class="aspect-grid" id="aspectGrid">
+                        <button class="aspect-btn" data-aspect="free">✂️</button>
+                        <button class="aspect-btn selected" data-aspect="1:1">1:1</button>
+                        <button class="aspect-btn" data-aspect="2:3">2:3</button>
+                        <button class="aspect-btn" data-aspect="3:2">3:2</button>
+                        <button class="aspect-btn" data-aspect="3:4">3:4</button>
+                        <button class="aspect-btn" data-aspect="4:3">4:3</button>
+                        <button class="aspect-btn" data-aspect="9:16">9:16</button>
+                        <button class="aspect-btn" data-aspect="16:9">16:9</button>
+                    </div>
+                    <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
+                        👆 Потяните за уголки рамки | 🖐️ Перемещайте увеличенное фото
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Остальные выпадающие меню (заглушки) -->
-        <div class="accordion-item">
-            <button class="accordion-header" data-accordion="correction">
-                <span>🎨 Коррекция</span>
-                <span class="accordion-arrow">▼</span>
-            </button>
-            <div class="accordion-content" id="accordion-correction">
-                <div class="tools-placeholder">🛠 Инструменты коррекции в разработке</div>
+            <!-- Остальные выпадающие меню (заглушки) -->
+            <div class="accordion-item">
+                <button class="accordion-header" data-accordion="correction">
+                    <span>🎨 Коррекция</span>
+                    <span class="accordion-arrow">▼</span>
+                </button>
+                <div class="accordion-content" id="accordion-correction">
+                    <div class="tools-placeholder">🛠 Инструменты коррекции в разработке</div>
+                </div>
             </div>
-        </div>
-        <div class="accordion-item">
-            <button class="accordion-header" data-accordion="color">
-                <span>🌈 Цвет</span>
-                <span class="accordion-arrow">▼</span>
-            </button>
-            <div class="accordion-content" id="accordion-color">
-                <div class="tools-placeholder">🎨 Инструменты цвета в разработке</div>
+            <div class="accordion-item">
+                <button class="accordion-header" data-accordion="color">
+                    <span>🌈 Цвет</span>
+                    <span class="accordion-arrow">▼</span>
+                </button>
+                <div class="accordion-content" id="accordion-color">
+                    <div class="tools-placeholder">🎨 Инструменты цвета в разработке</div>
+                </div>
             </div>
-        </div>
-        <div class="accordion-item">
-            <button class="accordion-header" data-accordion="effects">
-                <span>✨ Эффекты</span>
-                <span class="accordion-arrow">▼</span>
-            </button>
-            <div class="accordion-content" id="accordion-effects">
-                <div class="tools-placeholder">🎭 Эффекты и фильтры в разработке</div>
+            <div class="accordion-item">
+                <button class="accordion-header" data-accordion="effects">
+                    <span>✨ Эффекты</span>
+                    <span class="accordion-arrow">▼</span>
+                </button>
+                <div class="accordion-content" id="accordion-effects">
+                    <div class="tools-placeholder">🎭 Эффекты и фильтры в разработке</div>
+                </div>
             </div>
-        </div>
-        <div class="accordion-item">
-            <button class="accordion-header" data-accordion="text">
-                <span>📝 Текст</span>
-                <span class="accordion-arrow">▼</span>
-            </button>
-            <div class="accordion-content" id="accordion-text">
-                <div class="tools-placeholder">📝 Добавление текста в разработке</div>
+            <div class="accordion-item">
+                <button class="accordion-header" data-accordion="text">
+                    <span>📝 Текст</span>
+                    <span class="accordion-arrow">▼</span>
+                </button>
+                <div class="accordion-content" id="accordion-text">
+                    <div class="tools-placeholder">📝 Добавление текста в разработке</div>
+                </div>
             </div>
         </div>
     </div>
@@ -575,21 +601,20 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    backBtn.addEventListener('click', () => {
+    // === СОХРАНЕНИЕ ПРИ ВОЗВРАТЕ ===
+    function saveAndGoBack() {
         const currentImageSrc = previewImg.src;
         if (currentImageSrc && currentImageSrc !== savedImage) {
             localStorage.setItem('currentImage', currentImageSrc);
+            localStorage.setItem('currentImageName', savedName);
+            localStorage.setItem('currentImageSize', savedSize);
+            localStorage.setItem('currentImageFormat', savedFormat);
         }
         window.location.href = '../index.html';
-    });
-    
-    saveBtn.addEventListener('click', () => {
-        const currentImageSrc = previewImg.src;
-        if (currentImageSrc) {
-            localStorage.setItem('currentImage', currentImageSrc);
-        }
-        window.location.href = '../index.html';
-    });
+    }
+
+    backBtn.addEventListener('click', saveAndGoBack);
+    saveBtn.addEventListener('click', saveAndGoBack);
 
     previewImg.onload = () => {
         resetTransform();
