@@ -9,6 +9,8 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -72,6 +74,7 @@
             display: flex;
             flex-direction: column;
             flex: 1;
+            position: relative;
         }
         
         .preview-area {
@@ -98,6 +101,14 @@
             text-align: center;
             padding: 20px;
         }
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         .preview-image {
             max-width: 100%;
             max-height: 100%;
@@ -108,6 +119,43 @@
             display: block;
             margin: auto;
         }
+        
+        /* Рамка кадрирования */
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .crop-frame {
+            position: absolute;
+            border: 2px solid #fff;
+            outline: 2px solid rgba(0,0,0,0.5);
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+            cursor: move;
+            pointer-events: auto;
+        }
+        .crop-handle {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        .crop-handle.nw { top: -12px; left: -12px; cursor: nw-resize; }
+        .crop-handle.n { top: -12px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .crop-handle.ne { top: -12px; right: -12px; cursor: ne-resize; }
+        .crop-handle.w { top: 50%; left: -12px; transform: translateY(-50%); cursor: w-resize; }
+        .crop-handle.e { top: 50%; right: -12px; transform: translateY(-50%); cursor: e-resize; }
+        .crop-handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
+        .crop-handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .crop-handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
+        
         .file-info {
             margin-top: 12px;
             font-size: 12px;
@@ -283,7 +331,6 @@
             display: block;
         }
         
-        /* Сетка форматов */
         .aspect-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -347,7 +394,10 @@
             <div id="previewPlaceholder" class="preview-placeholder">
                 📸 Нажмите для загрузки изображения
             </div>
-            <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
+            <div id="imageContainer" class="image-container" style="display: none;">
+                <img id="previewImg" class="preview-image" alt="preview">
+                <div id="cropOverlay" class="crop-overlay"></div>
+            </div>
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
     </div>
@@ -387,8 +437,10 @@
     const uploadZone = document.getElementById('uploadZone');
     const previewImg = document.getElementById('previewImg');
     const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const imageContainer = document.getElementById('imageContainer');
     const fileInfoDiv = document.getElementById('fileInfo');
     const slogan = document.getElementById('slogan');
+    const cropOverlay = document.getElementById('cropOverlay');
     
     const menuPreviewImg = document.getElementById('menuPreviewImg');
     const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
@@ -397,34 +449,258 @@
     let currentImageData = null;
     let openSectionId = null;
     let selectedAspect = 'free';
+    let currentAspectRatio = null;
+    let cropFrame = null;
+    let isDragging = false;
+    let isResizing = false;
+    let currentHandle = null;
+    let startX, startY, startLeft, startTop, startWidth, startHeight;
 
     const aspectRatios = [
-        { id: 'free', label: 'Свободный', number: '✂️' },
-        { id: '1:1', label: '1:1', number: '1:1' },
-        { id: '2:3', label: '2:3', number: '2:3' },
-        { id: '3:2', label: '3:2', number: '3:2' },
-        { id: '3:4', label: '3:4', number: '3:4' },
-        { id: '4:3', label: '4:3', number: '4:3' },
-        { id: '9:16', label: '9:16', number: '9:16' },
-        { id: '16:9', label: '16:9', number: '16:9' }
+        { id: 'free', label: 'Свободный', number: '✂️', ratio: null },
+        { id: '1:1', label: '1:1', number: '1:1', ratio: 1 },
+        { id: '2:3', label: '2:3', number: '2:3', ratio: 2/3 },
+        { id: '3:2', label: '3:2', number: '3:2', ratio: 3/2 },
+        { id: '3:4', label: '3:4', number: '3:4', ratio: 3/4 },
+        { id: '4:3', label: '4:3', number: '4:3', ratio: 4/3 },
+        { id: '9:16', label: '9:16', number: '9:16', ratio: 9/16 },
+        { id: '16:9', label: '16:9', number: '16:9', ratio: 16/9 }
     ];
+
+    function createCropFrame() {
+        const container = imageContainer;
+        const containerRect = container.getBoundingClientRect();
+        const imgRect = previewImg.getBoundingClientRect();
+        
+        // Начальная рамка — 80% от изображения
+        let initialWidth = imgRect.width * 0.8;
+        let initialHeight = imgRect.height * 0.8;
+        
+        if (currentAspectRatio) {
+            if (currentAspectRatio > 1) {
+                initialHeight = initialWidth / currentAspectRatio;
+            } else {
+                initialWidth = initialHeight * currentAspectRatio;
+            }
+        }
+        
+        const left = (imgRect.width - initialWidth) / 2;
+        const top = (imgRect.height - initialHeight) / 2;
+        
+        cropFrame = document.createElement('div');
+        cropFrame.className = 'crop-frame';
+        cropFrame.style.left = left + 'px';
+        cropFrame.style.top = top + 'px';
+        cropFrame.style.width = initialWidth + 'px';
+        cropFrame.style.height = initialHeight + 'px';
+        
+        // Добавляем ручки
+        const handles = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
+        handles.forEach(handle => {
+            const handleDiv = document.createElement('div');
+            handleDiv.className = `crop-handle ${handle}`;
+            cropFrame.appendChild(handleDiv);
+        });
+        
+        cropOverlay.innerHTML = '';
+        cropOverlay.appendChild(cropFrame);
+        
+        attachCropEvents();
+    }
+    
+    function attachCropEvents() {
+        cropFrame.addEventListener('mousedown', startDrag);
+        cropFrame.addEventListener('touchstart', startDrag);
+        
+        const handles = cropFrame.querySelectorAll('.crop-handle');
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => startResize(e, handle));
+            handle.addEventListener('touchstart', (e) => startResize(e, handle));
+        });
+    }
+    
+    function startDrag(e) {
+        e.preventDefault();
+        isDragging = true;
+        const rect = cropFrame.getBoundingClientRect();
+        const containerRect = imageContainer.getBoundingClientRect();
+        const imgRect = previewImg.getBoundingClientRect();
+        
+        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        
+        startX = clientX - rect.left;
+        startY = clientY - rect.top;
+        startLeft = parseFloat(cropFrame.style.left);
+        startTop = parseFloat(cropFrame.style.top);
+        
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', onDrag);
+        document.addEventListener('touchend', stopDrag);
+    }
+    
+    function onDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        const imgRect = previewImg.getBoundingClientRect();
+        
+        let newLeft = startLeft + (clientX - startX);
+        let newTop = startTop + (clientY - startY);
+        
+        // Ограничения
+        newLeft = Math.max(0, Math.min(newLeft, imgRect.width - cropFrame.offsetWidth));
+        newTop = Math.max(0, Math.min(newTop, imgRect.height - cropFrame.offsetHeight));
+        
+        cropFrame.style.left = newLeft + 'px';
+        cropFrame.style.top = newTop + 'px';
+    }
+    
+    function stopDrag() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', stopDrag);
+    }
+    
+    function startResize(e, handle) {
+        e.preventDefault();
+        isResizing = true;
+        currentHandle = handle.className.split(' ')[1];
+        
+        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        
+        startX = clientX;
+        startY = clientY;
+        startLeft = parseFloat(cropFrame.style.left);
+        startTop = parseFloat(cropFrame.style.top);
+        startWidth = cropFrame.offsetWidth;
+        startHeight = cropFrame.offsetHeight;
+        
+        document.addEventListener('mousemove', onResize);
+        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('touchmove', onResize);
+        document.addEventListener('touchend', stopResize);
+    }
+    
+    function onResize(e) {
+        if (!isResizing) return;
+        e.preventDefault();
+        
+        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        const imgRect = previewImg.getBoundingClientRect();
+        
+        let newLeft = startLeft;
+        let newTop = startTop;
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        
+        if (currentHandle.includes('e')) newWidth = startWidth + dx;
+        if (currentHandle.includes('w')) {
+            newWidth = startWidth - dx;
+            newLeft = startLeft + dx;
+        }
+        if (currentHandle.includes('s')) newHeight = startHeight + dy;
+        if (currentHandle.includes('n')) {
+            newHeight = startHeight - dy;
+            newTop = startTop + dy;
+        }
+        
+        // Применяем пропорции если нужно
+        if (currentAspectRatio && selectedAspect !== 'free') {
+            if (currentHandle.includes('e') || currentHandle.includes('w')) {
+                newHeight = newWidth / currentAspectRatio;
+                if (currentHandle.includes('n')) newTop = startTop + (startHeight - newHeight);
+            } else {
+                newWidth = newHeight * currentAspectRatio;
+                if (currentHandle.includes('w')) newLeft = startLeft + (startWidth - newWidth);
+            }
+        }
+        
+        // Ограничения
+        newWidth = Math.max(50, Math.min(newWidth, imgRect.width));
+        newHeight = Math.max(50, Math.min(newHeight, imgRect.height));
+        newLeft = Math.max(0, Math.min(newLeft, imgRect.width - newWidth));
+        newTop = Math.max(0, Math.min(newTop, imgRect.height - newHeight));
+        
+        cropFrame.style.left = newLeft + 'px';
+        cropFrame.style.top = newTop + 'px';
+        cropFrame.style.width = newWidth + 'px';
+        cropFrame.style.height = newHeight + 'px';
+    }
+    
+    function stopResize() {
+        isResizing = false;
+        currentHandle = null;
+        document.removeEventListener('mousemove', onResize);
+        document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchmove', onResize);
+        document.removeEventListener('touchend', stopResize);
+    }
+    
+    function updateCropAspect(ratioId) {
+        const aspect = aspectRatios.find(a => a.id === ratioId);
+        selectedAspect = ratioId;
+        currentAspectRatio = aspect.ratio;
+        
+        if (cropFrame) {
+            const imgRect = previewImg.getBoundingClientRect();
+            let newWidth = cropFrame.offsetWidth;
+            let newHeight = cropFrame.offsetHeight;
+            
+            if (currentAspectRatio) {
+                if (newWidth / newHeight > currentAspectRatio) {
+                    newWidth = newHeight * currentAspectRatio;
+                } else {
+                    newHeight = newWidth / currentAspectRatio;
+                }
+            }
+            
+            newWidth = Math.min(newWidth, imgRect.width);
+            newHeight = Math.min(newHeight, imgRect.height);
+            
+            const newLeft = (imgRect.width - newWidth) / 2;
+            const newTop = (imgRect.height - newHeight) / 2;
+            
+            cropFrame.style.left = newLeft + 'px';
+            cropFrame.style.top = newTop + 'px';
+            cropFrame.style.width = newWidth + 'px';
+            cropFrame.style.height = newHeight + 'px';
+        }
+    }
 
     function updatePreview(dataUrl, name, size, format) {
         currentImageData = dataUrl;
         
         previewImg.src = dataUrl;
-        previewImg.style.display = 'block';
-        previewPlaceholder.style.display = 'none';
-        fileInfoDiv.style.display = 'block';
-        fileInfoDiv.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
-        
-        menuPreviewImg.src = dataUrl;
-        menuPreviewImg.style.display = 'block';
-        menuPreviewPlaceholder.style.display = 'none';
-        menuFileInfo.style.display = 'block';
-        menuFileInfo.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
-        
-        slogan.classList.add('hidden');
+        previewImg.onload = () => {
+            previewPlaceholder.style.display = 'none';
+            imageContainer.style.display = 'flex';
+            fileInfoDiv.style.display = 'block';
+            fileInfoDiv.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
+            
+            menuPreviewImg.src = dataUrl;
+            menuPreviewImg.style.display = 'block';
+            menuPreviewPlaceholder.style.display = 'none';
+            menuFileInfo.style.display = 'block';
+            menuFileInfo.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
+            
+            slogan.classList.add('hidden');
+            
+            // Создаем рамку кадрирования
+            setTimeout(() => {
+                createCropFrame();
+                updateCropAspect(selectedAspect);
+            }, 100);
+        };
     }
 
     function handleFile(file) {
@@ -485,7 +761,7 @@
                 `).join('')}
             </div>
             <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                Выберите пропорцию для обрезки
+                Перетаскивайте рамку и её края для обрезки
             </div>
         `;
     }
@@ -534,6 +810,7 @@
                 e.stopPropagation();
                 const aspectId = btn.dataset.aspect;
                 selectedAspect = aspectId;
+                updateCropAspect(aspectId);
                 
                 document.querySelectorAll('.aspect-btn').forEach(b => {
                     if (b.dataset.aspect === aspectId) {
@@ -542,14 +819,11 @@
                         b.classList.remove('selected');
                     }
                 });
-                
-                console.log('Выбран формат:', aspectId);
             });
         });
     }
 
     function openMenu(menuId) {
-        // Показываем меню только для кнопки "Редактирование"
         if (menuId !== 'edit') {
             alert('Функция в разработке. Доступно только редактирование фото.');
             return;
@@ -583,8 +857,12 @@
     });
     
     saveBtn.addEventListener('click', () => {
-        console.log('Сохранение изображения');
-        alert('Функция сохранения в разработке');
+        if (cropFrame) {
+            // Здесь будет логика применения обрезки
+            alert('Сохранение обрезанного изображения в разработке');
+        } else {
+            alert('Функция сохранения в разработке');
+        }
     });
 </script>
 
