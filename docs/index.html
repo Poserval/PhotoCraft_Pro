@@ -14,9 +14,10 @@
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f9fafb;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .header {
@@ -68,6 +69,7 @@
             flex-direction: column;
             padding: 16px;
             min-height: 0;
+            overflow: hidden;
         }
 
         /* Область ОПП — занимает всё доступное место */
@@ -76,6 +78,7 @@
             display: flex;
             flex-direction: column;
             min-height: 0;
+            overflow: hidden;
         }
         
         .preview-area {
@@ -335,6 +338,7 @@
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const fileInfoDiv = document.getElementById('fileInfo');
     const slogan = document.getElementById('slogan');
+    const previewArea = document.getElementById('uploadZone');
     
     const menuPreviewImg = document.getElementById('menuPreviewImg');
     const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
@@ -359,18 +363,8 @@
         
         slogan.classList.add('hidden');
         
-        // Небольшая задержка для корректного пересчета размеров
-        setTimeout(() => {
-            const img = previewImg;
-            const container = uploadZone;
-            if (img.naturalHeight > img.naturalWidth && img.naturalHeight > window.innerHeight * 0.6) {
-                // Для вертикальных фото (9:16 и подобных) ограничиваем высоту
-                const maxHeight = window.innerHeight - 250;
-                img.style.maxHeight = maxHeight + 'px';
-            } else {
-                img.style.maxHeight = '70vh';
-            }
-        }, 100);
+        // Изображение уже вписано в контейнер благодаря CSS
+        // Никаких дополнительных ограничений не нужно
     }
 
     function handleFile(file) {
