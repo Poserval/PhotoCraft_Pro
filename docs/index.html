@@ -189,7 +189,7 @@
 
     <div class="tools-row">
         <div class="tool-icon" data-tool="edit">✏️</div>
-        <div class="tool-icon" data-tool="crop">✂️</div>
+        <div class="tool-icon disabled" data-tool="crop">✂️</div>
         <div class="tool-icon disabled" data-tool="inpaint">🖌️</div>
         <div class="tool-icon disabled" data-tool="replace-bg">🖼️</div>
     </div>
@@ -317,7 +317,6 @@
         slogan.classList.add('hidden');
         resetTransform();
         
-        // Сохраняем в localStorage для передачи на другие страницы
         localStorage.setItem('currentImage', dataUrl);
         localStorage.setItem('currentImageName', name);
         localStorage.setItem('currentImageSize', size);
@@ -342,23 +341,20 @@
         input.click();
     });
     
-    // Обработчики масштабирования
     previewImg.addEventListener('touchstart', handleTouchStart);
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
     
-    // Переход на страницу кадрирования
+    // Переход на страницу редактирования (кадрирование)
     document.querySelectorAll('.tool-icon').forEach(btn => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
-            if (tool === 'crop') {
+            if (tool === 'edit') {
                 if (currentImageData) {
                     window.location.href = 'pages/crop.html';
                 } else {
                     alert('Сначала загрузите изображение');
                 }
-            } else if (tool === 'edit') {
-                alert('Функция в разработке');
             }
         });
     });
