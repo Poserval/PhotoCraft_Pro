@@ -298,13 +298,9 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
-            font-weight: 600;
-            color: #374151;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
         }
         .aspect-btn:active {
             background: #e5e7eb;
@@ -319,10 +315,6 @@
             font-size: 28px;
             font-weight: 700;
             line-height: 1;
-        }
-        .aspect-label {
-            font-size: 12px;
-            font-weight: 500;
         }
         .tools-placeholder {
             text-align: center;
@@ -489,7 +481,6 @@
                 ${aspectRatios.map(ratio => `
                     <button class="aspect-btn ${selectedAspect === ratio.id ? 'selected' : ''}" data-aspect="${ratio.id}">
                         <div class="aspect-number">${ratio.number}</div>
-                        <div class="aspect-label">${ratio.label}</div>
                     </button>
                 `).join('')}
             </div>
@@ -512,7 +503,6 @@
             </div>
         `).join('');
         
-        // Добавляем обработчики только для активных секций
         document.querySelectorAll('.section-btn:not([disabled])').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -539,7 +529,6 @@
             });
         });
         
-        // Добавляем обработчики для кнопок форматов
         document.querySelectorAll('.aspect-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
