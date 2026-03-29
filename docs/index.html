@@ -3,70 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>PhotoCraft Pro — Главная</title>
+    <title>PhotoCraft Pro — AI Photo Studio</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f9fafb;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
+
         .header {
             background: white;
             border-bottom: 1px solid #e5e7eb;
             padding: 12px 16px;
             text-align: center;
+            flex-shrink: 0;
         }
-        .logo { height: 120px; width: auto; object-fit: contain; }
-        .slogan { text-align: center; padding: 16px 16px 0 16px; }
-        .slogan.hidden { display: none; }
+        .logo {
+            height: 120px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .slogan {
+            text-align: center;
+            padding: 16px 16px 0 16px;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .slogan.hidden {
+            display: none;
+        }
         .main-title {
-            font-size: 20px; font-weight: 800;
+            font-size: 20px;
+            font-weight: 800;
             background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
-            -webkit-background-clip: text; background-clip: text; color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
             white-space: nowrap;
         }
-        .formats-row { font-size: 10px; color: #9ca3af; margin-top: 6px; }
-        .main-content { flex: 1; display: flex; flex-direction: column; padding: 16px; }
-        .preview-wrapper { display: flex; flex-direction: column; flex: 1; position: relative; overflow: hidden; }
-        .preview-area {
-            background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 20px;
-            aspect-ratio: 3 / 4; width: 100%; position: relative; overflow: hidden; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
+        .formats-row {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 6px;
+            letter-spacing: 0.3px;
         }
-        .preview-placeholder {
-            color: #6b7280; font-size: 14px; text-align: center;
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        .preview-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .preview-area {
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            aspect-ratio: 3 / 4;
             width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .preview-area:active {
+            background: #e5e7eb;
+        }
+        
+        .preview-placeholder {
+            color: #6b7280;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
         }
         .preview-image {
-            width: 100%; height: 100%; object-fit: contain; display: block;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 18px;
+            display: block;
+            margin: auto;
         }
-        .file-info { margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center; }
+        .file-info {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+        }
+
         .tools-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
             margin-top: 20px;
             margin-bottom: 20px;
+            flex-shrink: 0;
         }
-        .tool-card {
+        .tool-icon {
+            width: 60px;
+            height: 60px;
             background: white;
             border: 1.5px solid #e5e7eb;
             border-radius: 20px;
-            padding: 16px 8px;
-            text-align: center;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .tool-card:active { transform: scale(0.96); background: #f3f4f6; }
-        .tool-icon { font-size: 40px; margin-bottom: 8px; }
-        .tool-title { font-size: 14px; font-weight: 500; color: #1f2937; }
-        .tool-desc { font-size: 11px; color: #6b7280; margin-top: 4px; }
-        .disabled {
-            opacity: 0.5;
-            pointer-events: none;
+        .tool-icon:active {
+            transform: scale(0.96);
+            background: #f3f4f6;
         }
     </style>
 </head>
@@ -84,38 +155,19 @@
 <div class="main-content">
     <div class="preview-wrapper">
         <div id="uploadZone" class="preview-area">
-            <div id="previewPlaceholder" class="preview-placeholder">📸 Нажмите для загрузки изображения</div>
+            <div id="previewPlaceholder" class="preview-placeholder">
+                📸 Нажмите для загрузки изображения
+            </div>
             <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
     </div>
-    
+
     <div class="tools-row">
-        <div class="tool-card" data-tool="crop">
-            <div class="tool-icon">✂️</div>
-            <div class="tool-title">Кадрирование</div>
-            <div class="tool-desc">Обрезка фото</div>
-        </div>
-        <div class="tool-card disabled" data-tool="edit">
-            <div class="tool-icon">🎨</div>
-            <div class="tool-title">Редактирование</div>
-            <div class="tool-desc">Коррекция, цвет, эффекты</div>
-        </div>
-        <div class="tool-card disabled" data-tool="text">
-            <div class="tool-icon">📝</div>
-            <div class="tool-title">Текст</div>
-            <div class="tool-desc">Добавление текста</div>
-        </div>
-        <div class="tool-card disabled" data-tool="remove-bg">
-            <div class="tool-icon">✨</div>
-            <div class="tool-title">Удаление фона</div>
-            <div class="tool-desc">AI удаление фона</div>
-        </div>
-        <div class="tool-card disabled" data-tool="replace-bg">
-            <div class="tool-icon">🖼️</div>
-            <div class="tool-title">Замена фона</div>
-            <div class="tool-desc">Новый фон</div>
-        </div>
+        <div class="tool-icon" data-tool="crop">✂️</div>
+        <div class="tool-icon" data-tool="edit" style="opacity: 0.5;">🎨</div>
+        <div class="tool-icon" data-tool="text" style="opacity: 0.5;">📝</div>
+        <div class="tool-icon" data-tool="remove-bg" style="opacity: 0.5;">✨</div>
     </div>
 </div>
 
@@ -137,6 +189,7 @@
         fileInfoDiv.innerText = `${name} • ${(size/1024/1024).toFixed(2)} MB • ${format}`;
         slogan.classList.add('hidden');
         
+        // Сохраняем в localStorage для передачи на другие страницы
         localStorage.setItem('currentImage', dataUrl);
         localStorage.setItem('currentImageName', name);
         localStorage.setItem('currentImageSize', size);
@@ -161,13 +214,18 @@
         input.click();
     });
     
-    document.querySelectorAll('.tool-card:not(.disabled)').forEach(card => {
-        card.addEventListener('click', () => {
-            const tool = card.dataset.tool;
-            if (currentImageData) {
-                window.location.href = `/PhotoCraft_Pro/docs/pages/${tool}.html`;
+    // Переход на страницу инструмента (только для кадрирования)
+    document.querySelectorAll('.tool-icon').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tool = btn.dataset.tool;
+            if (tool === 'crop') {
+                if (currentImageData) {
+                    window.location.href = `/PhotoCraft_Pro/docs/pages/${tool}.html`;
+                } else {
+                    alert('Сначала загрузите изображение');
+                }
             } else {
-                alert('Сначала загрузите изображение');
+                alert('Функция в разработке');
             }
         });
     });
