@@ -2,53 +2,162 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>PhotoCraft Pro — Кадрирование</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>PhotoCraft Pro — Редактирование фото</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: system-ui, sans-serif;
-            background: #f3f4f6;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f9fafb;
             min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            padding: 20px;
-        }
-        .header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
+            flex-direction: column;
         }
-        .back-btn {
-            background: #e5e7eb;
-            border: none;
-            border-radius: 16px;
-            width: 44px;
-            height: 44px;
-            font-size: 24px;
-            cursor: pointer;
+
+        /* Хедер */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: center;
+            flex-shrink: 0;
         }
-        .title { font-size: 18px; font-weight: 600; }
-        .crop-container {
-            position: relative;
-            background: #1f2937;
-            border-radius: 16px;
-            overflow: hidden;
+        .logo { height: 120px; width: auto; object-fit: contain; }
+
+        /* Основной контент */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        /* Превью */
+        .preview-wrapper {
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 20px;
             aspect-ratio: 3 / 4;
             width: 100%;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
         }
-        .crop-container img {
+        .preview-image {
             width: 100%;
             height: 100%;
             object-fit: contain;
             display: block;
+            transform-origin: center center;
         }
+        .file-info {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        /* Панель управления */
+        .control-panel {
+            margin-top: 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .back-btn, .save-btn {
+            width: 44px;
+            height: 44px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 16px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .save-btn { background: #3b82f6; color: white; }
+        .panel-title { font-size: 18px; font-weight: 600; color: #1f2937; }
+
+        /* Вкладки */
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 4px;
+            padding: 12px 12px 0 12px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .tab-btn {
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            white-space: nowrap;
+            border-radius: 12px 12px 0 0;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: white;
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        /* Содержимое вкладок */
+        .tab-content {
+            padding: 16px;
+            background: white;
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Сетка форматов */
+        .aspect-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .aspect-btn {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 16px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .aspect-btn:active { transform: scale(0.96); background: #f3f4f6; }
+        .aspect-btn.selected { background: #3b82f6; border-color: #3b82f6; color: white; }
+        .aspect-number { font-size: 28px; font-weight: 700; line-height: 1; }
+
+        .tools-placeholder {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        /* Кадрирование */
         .crop-overlay {
             position: absolute;
             top: 0;
@@ -68,7 +177,8 @@
             z-index: 20;
             display: none;
         }
-        .handle {
+        .crop-frame:active { cursor: grabbing; }
+        .crop-handle {
             position: absolute;
             width: 24px;
             height: 24px;
@@ -77,88 +187,245 @@
             border-radius: 6px;
             pointer-events: auto;
         }
-        .handle.nw { top: -12px; left: -12px; cursor: nw-resize; }
-        .handle.n { top: -12px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .handle.ne { top: -12px; right: -12px; cursor: ne-resize; }
-        .handle.w { top: 50%; left: -12px; transform: translateY(-50%); cursor: w-resize; }
-        .handle.e { top: 50%; right: -12px; transform: translateY(-50%); cursor: e-resize; }
-        .handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
-        .handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
-        .save-btn {
-            margin-top: 16px;
-            width: 100%;
-            padding: 14px;
-            background: #3b82f6;
+        .crop-handle.nw { top: -12px; left: -12px; cursor: nw-resize; }
+        .crop-handle.n { top: -12px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .crop-handle.ne { top: -12px; right: -12px; cursor: ne-resize; }
+        .crop-handle.w { top: 50%; left: -12px; transform: translateY(-50%); cursor: w-resize; }
+        .crop-handle.e { top: 50%; right: -12px; transform: translateY(-50%); cursor: e-resize; }
+        .crop-handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
+        .crop-handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .crop-handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
+
+        /* Кнопки масштабирования */
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .zoom-btn {
+            flex: 1;
+            padding: 10px;
+            background: #6b7280;
             color: white;
             border: none;
             border-radius: 12px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
         }
-        .info { margin-top: 12px; font-size: 11px; color: #6b7280; text-align: center; }
+        .zoom-btn:active { transform: scale(0.96); }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <button class="back-btn" id="backBtn">←</button>
-        <span class="title">✂️ Кадрирование</span>
-        <div style="width: 44px;"></div>
-    </div>
-    
-    <div id="cropContainer" class="crop-container">
-        <img id="image" src="" alt="Изображение">
-        <div id="overlay" class="crop-overlay"></div>
-        <div id="frame" class="crop-frame">
-            <div class="handle nw"></div><div class="handle n"></div><div class="handle ne"></div>
-            <div class="handle w"></div><div class="handle e"></div>
-            <div class="handle sw"></div><div class="handle s"></div><div class="handle se"></div>
+
+<div class="header">
+    <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro">
+</div>
+
+<div class="main-content">
+    <!-- Превью -->
+    <div class="preview-wrapper" id="previewWrapper">
+        <img id="previewImg" class="preview-image" src="" alt="preview">
+        <div id="cropOverlay" class="crop-overlay"></div>
+        <div id="cropFrame" class="crop-frame">
+            <div class="crop-handle nw"></div><div class="crop-handle n"></div><div class="crop-handle ne"></div>
+            <div class="crop-handle w"></div><div class="crop-handle e"></div>
+            <div class="crop-handle sw"></div><div class="crop-handle s"></div><div class="crop-handle se"></div>
         </div>
     </div>
-    
-    <button class="save-btn" id="saveBtn">💾 Применить и вернуться</button>
-    <div class="info">👇 Потяните за уголки рамки</div>
+    <div id="fileInfo" class="file-info"></div>
+
+    <!-- Кнопки масштабирования -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" id="zoomInBtn">🔍 + Увеличить</button>
+        <button class="zoom-btn" id="zoomOutBtn">🔍 - Уменьшить</button>
+        <button class="zoom-btn" id="resetZoomBtn">⟳ Сброс</button>
+    </div>
+
+    <!-- Панель управления -->
+    <div class="control-panel">
+        <div class="panel-header">
+            <button class="back-btn" id="backBtn">←</button>
+            <span class="panel-title">Редактирование фото</span>
+            <button class="save-btn" id="saveBtn">💾</button>
+        </div>
+
+        <!-- Вкладки -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="crop">Кадрирование</button>
+            <button class="tab-btn" data-tab="correction">Коррекция</button>
+            <button class="tab-btn" data-tab="color">Цвет</button>
+            <button class="tab-btn" data-tab="effects">Эффекты</button>
+            <button class="tab-btn" data-tab="text">Текст</button>
+        </div>
+
+        <!-- Вкладка: Кадрирование -->
+        <div id="tab-crop" class="tab-content active">
+            <div class="aspect-grid" id="aspectGrid">
+                <button class="aspect-btn selected" data-aspect="free">✂️</button>
+                <button class="aspect-btn" data-aspect="1:1">1:1</button>
+                <button class="aspect-btn" data-aspect="2:3">2:3</button>
+                <button class="aspect-btn" data-aspect="3:2">3:2</button>
+                <button class="aspect-btn" data-aspect="3:4">3:4</button>
+                <button class="aspect-btn" data-aspect="4:3">4:3</button>
+                <button class="aspect-btn" data-aspect="9:16">9:16</button>
+                <button class="aspect-btn" data-aspect="16:9">16:9</button>
+            </div>
+            <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
+                👆 Потяните за уголки рамки | 🖐️ Перемещайте увеличенное фото
+            </div>
+        </div>
+
+        <!-- Вкладка: Коррекция (заглушка) -->
+        <div id="tab-correction" class="tab-content">
+            <div class="tools-placeholder">🛠 Инструменты коррекции в разработке</div>
+        </div>
+
+        <!-- Вкладка: Цвет (заглушка) -->
+        <div id="tab-color" class="tab-content">
+            <div class="tools-placeholder">🎨 Инструменты цвета в разработке</div>
+        </div>
+
+        <!-- Вкладка: Эффекты (заглушка) -->
+        <div id="tab-effects" class="tab-content">
+            <div class="tools-placeholder">✨ Эффекты и фильтры в разработке</div>
+        </div>
+
+        <!-- Вкладка: Текст (заглушка) -->
+        <div id="tab-text" class="tab-content">
+            <div class="tools-placeholder">📝 Добавление текста в разработке</div>
+        </div>
+    </div>
 </div>
 
 <script>
-    const container = document.getElementById('cropContainer');
-    const image = document.getElementById('image');
-    const overlay = document.getElementById('overlay');
-    const frame = document.getElementById('frame');
+    // === ЭЛЕМЕНТЫ ===
+    const previewWrapper = document.getElementById('previewWrapper');
+    const previewImg = document.getElementById('previewImg');
+    const fileInfoDiv = document.getElementById('fileInfo');
     const backBtn = document.getElementById('backBtn');
     const saveBtn = document.getElementById('saveBtn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const resetZoomBtn = document.getElementById('resetZoomBtn');
+    const cropOverlay = document.getElementById('cropOverlay');
+    const cropFrame = document.getElementById('cropFrame');
 
-    // Загружаем изображение из localStorage
+    // === ЗАГРУЗКА ИЗОБРАЖЕНИЯ ИЗ localStorage ===
     const savedImage = localStorage.getItem('currentImage');
+    const savedName = localStorage.getItem('currentImageName');
+    const savedSize = localStorage.getItem('currentImageSize');
+    const savedFormat = localStorage.getItem('currentImageFormat');
+
     if (savedImage) {
-        image.src = savedImage;
+        previewImg.src = savedImage;
+        fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
     } else {
-        image.src = '';
-        alert('Нет загруженного изображения');
+        fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
 
+    // === МАСШТАБИРОВАНИЕ ===
+    let currentScale = 1;
+    let currentTranslateX = 0;
+    let currentTranslateY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    function applyTransform() {
+        previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+    }
+
+    function clampTranslate() {
+        const containerRect = previewWrapper.getBoundingClientRect();
+        const imgRect = previewImg.getBoundingClientRect();
+        const scaledWidth = imgRect.width;
+        const scaledHeight = imgRect.height;
+        
+        let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
+        let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
+        
+        if (scaledWidth <= containerRect.width) currentTranslateX = 0;
+        else currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
+        
+        if (scaledHeight <= containerRect.height) currentTranslateY = 0;
+        else currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
+        
+        applyTransform();
+    }
+
+    function resetZoom() {
+        currentScale = 1;
+        currentTranslateX = 0;
+        currentTranslateY = 0;
+        applyTransform();
+    }
+
+    function zoomIn() {
+        currentScale = Math.min(3, currentScale + 0.2);
+        applyTransform();
+        clampTranslate();
+    }
+
+    function zoomOut() {
+        currentScale = Math.max(1, currentScale - 0.2);
+        if (currentScale === 1) {
+            currentTranslateX = 0;
+            currentTranslateY = 0;
+        }
+        applyTransform();
+        clampTranslate();
+    }
+
+    // === ПЕРЕМЕЩЕНИЕ ПАЛЬЦЕМ ===
+    function onTouchStart(e) {
+        if (currentScale > 1) {
+            isDragging = true;
+            dragStartX = e.touches[0].clientX - currentTranslateX;
+            dragStartY = e.touches[0].clientY - currentTranslateY;
+        }
+    }
+
+    function onTouchMove(e) {
+        if (isDragging && currentScale > 1) {
+            e.preventDefault();
+            currentTranslateX = e.touches[0].clientX - dragStartX;
+            currentTranslateY = e.touches[0].clientY - dragStartY;
+            clampTranslate();
+        }
+    }
+
+    function onTouchEnd() {
+        isDragging = false;
+    }
+
+    // === РАМКА КАДРИРОВАНИЯ ===
     let frameRect = { x: 50, y: 50, w: 200, h: 200 };
     let activeHandle = null;
     let startX, startY, startRect;
-    
+
     function updateFramePosition() {
-        const rect = container.getBoundingClientRect();
-        frame.style.left = frameRect.x + 'px';
-        frame.style.top = frameRect.y + 'px';
-        frame.style.width = frameRect.w + 'px';
-        frame.style.height = frameRect.h + 'px';
+        const rect = previewWrapper.getBoundingClientRect();
+        cropFrame.style.left = frameRect.x + 'px';
+        cropFrame.style.top = frameRect.y + 'px';
+        cropFrame.style.width = frameRect.w + 'px';
+        cropFrame.style.height = frameRect.h + 'px';
     }
-    
+
     function initCrop() {
-        const rect = container.getBoundingClientRect();
+        const rect = previewWrapper.getBoundingClientRect();
         frameRect = { x: rect.width * 0.1, y: rect.height * 0.1, w: rect.width * 0.8, h: rect.height * 0.8 };
         updateFramePosition();
-        overlay.style.display = 'block';
-        frame.style.display = 'block';
+        cropOverlay.style.display = 'block';
+        cropFrame.style.display = 'block';
     }
-    
+
+    function disableCrop() {
+        cropOverlay.style.display = 'none';
+        cropFrame.style.display = 'none';
+        activeHandle = null;
+    }
+
     function startResize(e, handle) {
         e.preventDefault();
         e.stopPropagation();
@@ -167,7 +434,7 @@
         startY = e.touches ? e.touches[0].clientY : e.clientY;
         startRect = { ...frameRect };
     }
-    
+
     function startMove(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -176,7 +443,7 @@
         startY = e.touches ? e.touches[0].clientY : e.clientY;
         startRect = { ...frameRect };
     }
-    
+
     function onResizeMove(e) {
         if (!activeHandle) return;
         e.preventDefault();
@@ -184,7 +451,7 @@
         const currentY = e.touches ? e.touches[0].clientY : e.clientY;
         const dx = currentX - startX;
         const dy = currentY - startY;
-        const containerRect = container.getBoundingClientRect();
+        const containerRect = previewWrapper.getBoundingClientRect();
         let newRect = { ...startRect };
         
         if (activeHandle === 'move') {
@@ -207,26 +474,70 @@
         frameRect = newRect;
         updateFramePosition();
     }
-    
+
     function endResize() { activeHandle = null; }
-    
-    image.onload = () => {
-        initCrop();
-    };
-    
-    document.querySelectorAll('.handle').forEach(handle => {
+
+    // === ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ===
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            btn.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            // При переключении на вкладку "Кадрирование" показываем рамку
+            if (tabId === 'crop') {
+                initCrop();
+            } else {
+                disableCrop();
+            }
+        });
+    });
+
+    // === ФОРМАТЫ (пока только визуально, без функционала) ===
+    document.querySelectorAll('.aspect-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            // Пока только визуально, функционал позже
+        });
+    });
+
+    // === ОБРАБОТЧИКИ ===
+    previewImg.addEventListener('touchstart', onTouchStart);
+    previewImg.addEventListener('touchmove', onTouchMove);
+    previewImg.addEventListener('touchend', onTouchEnd);
+
+    document.querySelectorAll('.crop-handle').forEach(handle => {
         handle.addEventListener('touchstart', (e) => startResize(e, handle.classList[1]));
         handle.addEventListener('mousedown', (e) => startResize(e, handle.classList[1]));
     });
-    frame.addEventListener('touchstart', startMove);
-    frame.addEventListener('mousedown', startMove);
+    cropFrame.addEventListener('touchstart', startMove);
+    cropFrame.addEventListener('mousedown', startMove);
     window.addEventListener('touchmove', onResizeMove);
     window.addEventListener('mousemove', onResizeMove);
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
+
+    zoomInBtn.addEventListener('click', zoomIn);
+    zoomOutBtn.addEventListener('click', zoomOut);
+    resetZoomBtn.addEventListener('click', resetZoom);
     
     backBtn.addEventListener('click', () => window.location.href = '../index.html');
-    saveBtn.addEventListener('click', () => window.location.href = '../index.html');
+    saveBtn.addEventListener('click', () => {
+        // Пока просто сохраняем и возвращаемся
+        window.location.href = '../index.html';
+    });
+
+    // Инициализация
+    previewImg.onload = () => {
+        resetZoom();
+        initCrop();
+    };
 </script>
 </body>
 </html>
