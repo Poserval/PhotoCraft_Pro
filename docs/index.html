@@ -9,8 +9,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -74,11 +72,11 @@
             display: flex;
             flex-direction: column;
             flex: 1;
-            position: relative;
         }
         
         .preview-area {
-            background: #1e1e2f;
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
             border-radius: 20px;
             display: flex;
             align-items: center;
@@ -89,76 +87,27 @@
             width: 100%;
             overflow: hidden;
             position: relative;
-            touch-action: none;
+        }
+        .preview-area:active {
+            background: #e5e7eb;
         }
         
-        .image-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+        .preview-placeholder {
+            color: #6b7280;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
         }
-        
-        #cropCanvas {
+        .preview-image {
             max-width: 100%;
             max-height: 100%;
             width: auto;
             height: auto;
+            object-fit: contain;
+            border-radius: 18px;
             display: block;
-            cursor: grab;
-            touch-action: none;
+            margin: auto;
         }
-        
-        #cropCanvas:active {
-            cursor: grabbing;
-        }
-        
-        .crop-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: none;
-        }
-        
-        .crop-overlay.active {
-            display: block;
-            pointer-events: auto;
-        }
-        
-        .crop-box {
-            position: absolute;
-            border: 3px solid #3b82f6;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-            pointer-events: none;
-        }
-        
-        .crop-handle {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border: 2px solid #3b82f6;
-            border-radius: 50%;
-            pointer-events: auto;
-            cursor: pointer;
-            z-index: 10;
-        }
-        
-        .crop-handle.nw { top: -12px; left: -12px; cursor: nw-resize; }
-        .crop-handle.n { top: -12px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .crop-handle.ne { top: -12px; right: -12px; cursor: ne-resize; }
-        .crop-handle.w { top: 50%; left: -12px; transform: translateY(-50%); cursor: w-resize; }
-        .crop-handle.e { top: 50%; right: -12px; transform: translateY(-50%); cursor: e-resize; }
-        .crop-handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
-        .crop-handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .crop-handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
-        
         .file-info {
             margin-top: 12px;
             font-size: 12px;
@@ -334,6 +283,7 @@
             display: block;
         }
         
+        /* Сетка форматов */
         .aspect-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -378,10 +328,6 @@
         .disabled-section .section-btn {
             cursor: not-allowed;
         }
-        
-        .crop-mode-active {
-            cursor: crosshair;
-        }
     </style>
 </head>
 <body>
@@ -397,17 +343,11 @@
 
 <div class="main-content">
     <div class="preview-wrapper">
-        <div id="previewArea" class="preview-area">
-            <div class="image-container" id="imageContainer">
-                <canvas id="cropCanvas" style="display: none;"></canvas>
-                <div id="previewPlaceholder" style="color: #6b7280; text-align: center;">
-                    📸 Нажмите для загрузки изображения
-                </div>
+        <div id="uploadZone" class="preview-area">
+            <div id="previewPlaceholder" class="preview-placeholder">
+                📸 Нажмите для загрузки изображения
             </div>
-            <div id="cropOverlay" class="crop-overlay">
-                <div id="cropBox" class="crop-box"></div>
-                <div id="handlesContainer"></div>
-            </div>
+            <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
     </div>
@@ -424,7 +364,9 @@
     <div class="menu-fixed-top">
         <div class="menu-preview">
             <img id="menuPreviewImg" class="menu-preview-img" style="display: none;" alt="preview">
-            <div id="menuPreviewPlaceholder" style="padding: 20px; color: #6b7280;">📸 Нет загруженного фото</div>
+            <div id="menuPreviewPlaceholder" class="preview-placeholder" style="padding: 20px;">
+                📸 Нет загруженного фото
+            </div>
         </div>
         <div id="menuFileInfo" class="menu-file-info" style="display: none;"></div>
         
@@ -441,262 +383,21 @@
 </div>
 
 <script>
-    // === Cropper State ===
-    let img = new Image();
-    let canvas = document.getElementById('cropCanvas');
-    let ctx = canvas.getContext('2d');
-    let cropBox = document.getElementById('cropBox');
-    let handlesContainer = document.getElementById('handlesContainer');
-    let cropOverlay = document.getElementById('cropOverlay');
-    let previewArea = document.getElementById('previewArea');
-    let previewPlaceholderDiv = document.getElementById('previewPlaceholder');
+    // === Загрузка фото ===
+    const uploadZone = document.getElementById('uploadZone');
+    const previewImg = document.getElementById('previewImg');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const fileInfoDiv = document.getElementById('fileInfo');
+    const slogan = document.getElementById('slogan');
     
-    let isDragging = false;
-    let dragStart = { x: 0, y: 0 };
-    let currentAspect = 'free';
-    let cropRect = { x: 0, y: 0, w: 0, h: 0 };
-    let imageScale = 1;
-    let imageX = 0, imageY = 0;
-    let canvasWidth = 0, canvasHeight = 0;
-    let cropModeActive = false; // Режим кадрирования включается только из меню
+    const menuPreviewImg = document.getElementById('menuPreviewImg');
+    const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
+    const menuFileInfo = document.getElementById('menuFileInfo');
     
-    function initCropper() {
-        canvasWidth = previewArea.clientWidth;
-        canvasHeight = previewArea.clientHeight;
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        
-        if (img.src) {
-            drawImageOnCanvas();
-            if (cropModeActive) {
-                initCropRect();
-                updateCropUI();
-            }
-        }
-    }
-    
-    function drawImageOnCanvas() {
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-        let imgWidth = img.width * imageScale;
-        let imgHeight = img.height * imageScale;
-        let x = imageX + (canvasWidth - imgWidth) / 2;
-        let y = imageY + (canvasHeight - imgHeight) / 2;
-        ctx.drawImage(img, x, y, imgWidth, imgHeight);
-    }
-    
-    function initCropRect() {
-        let rectW = canvasWidth * 0.8;
-        let rectH = canvasHeight * 0.8;
-        cropRect = {
-            x: (canvasWidth - rectW) / 2,
-            y: (canvasHeight - rectH) / 2,
-            w: rectW,
-            h: rectH
-        };
-        applyAspectRatio();
-    }
-    
-    function applyAspectRatio() {
-        if (currentAspect !== 'free') {
-            let ratio = eval(currentAspect);
-            let newW = cropRect.w;
-            let newH = newW / ratio;
-            if (newH > canvasHeight * 0.9) {
-                newH = canvasHeight * 0.9;
-                newW = newH * ratio;
-            }
-            cropRect.w = Math.min(newW, canvasWidth);
-            cropRect.h = newH;
-            cropRect.x = Math.max(0, Math.min(canvasWidth - cropRect.w, cropRect.x));
-            cropRect.y = Math.max(0, Math.min(canvasHeight - cropRect.h, cropRect.y));
-        }
-        updateCropUI();
-    }
-    
-    function updateCropUI() {
-        cropBox.style.left = cropRect.x + 'px';
-        cropBox.style.top = cropRect.y + 'px';
-        cropBox.style.width = cropRect.w + 'px';
-        cropBox.style.height = cropRect.h + 'px';
-        
-        handlesContainer.innerHTML = `
-            <div class="crop-handle nw" data-handle="nw"></div>
-            <div class="crop-handle n" data-handle="n"></div>
-            <div class="crop-handle ne" data-handle="ne"></div>
-            <div class="crop-handle w" data-handle="w"></div>
-            <div class="crop-handle e" data-handle="e"></div>
-            <div class="crop-handle sw" data-handle="sw"></div>
-            <div class="crop-handle s" data-handle="s"></div>
-            <div class="crop-handle se" data-handle="se"></div>
-        `;
-        
-        document.querySelectorAll('.crop-handle').forEach(handle => {
-            handle.addEventListener('touchstart', startResize);
-            handle.addEventListener('mousedown', startResize);
-        });
-    }
-    
-    function startResize(e) {
-        if (!cropModeActive) return;
-        e.preventDefault();
-        e.stopPropagation();
-        let handle = e.target.dataset.handle;
-        let startX = e.touches ? e.touches[0].clientX : e.clientX;
-        let startY = e.touches ? e.touches[0].clientY : e.clientY;
-        let startRect = { ...cropRect };
-        
-        function onMove(moveEvent) {
-            let moveX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
-            let moveY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
-            let dx = moveX - startX;
-            let dy = moveY - startY;
-            let newRect = { ...startRect };
-            
-            if (handle.includes('w')) {
-                newRect.x = Math.min(startRect.x + startRect.w - 50, Math.max(0, startRect.x + dx));
-                newRect.w = startRect.w + (startRect.x - newRect.x);
-            }
-            if (handle.includes('e')) {
-                newRect.w = Math.min(canvasWidth - newRect.x, Math.max(50, startRect.w + dx));
-            }
-            if (handle.includes('n')) {
-                newRect.y = Math.min(startRect.y + startRect.h - 50, Math.max(0, startRect.y + dy));
-                newRect.h = startRect.h + (startRect.y - newRect.y);
-            }
-            if (handle.includes('s')) {
-                newRect.h = Math.min(canvasHeight - newRect.y, Math.max(50, startRect.h + dy));
-            }
-            
-            if (currentAspect !== 'free') {
-                let ratio = eval(currentAspect);
-                if (handle.includes('w') || handle.includes('e')) {
-                    newRect.h = newRect.w / ratio;
-                } else {
-                    newRect.w = newRect.h * ratio;
-                }
-                if (newRect.x + newRect.w > canvasWidth) newRect.x = canvasWidth - newRect.w;
-                if (newRect.y + newRect.h > canvasHeight) newRect.y = canvasHeight - newRect.h;
-                if (newRect.x < 0) newRect.x = 0;
-                if (newRect.y < 0) newRect.y = 0;
-            }
-            
-            cropRect = newRect;
-            updateCropUI();
-        }
-        
-        function onEnd() {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onEnd);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('touchend', onEnd);
-        }
-        
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onEnd);
-        document.addEventListener('touchmove', onMove);
-        document.addEventListener('touchend', onEnd);
-    }
-    
-    // Pinch zoom и drag - всегда активны после загрузки
-    let initialDistance = 0;
-    let initialScale = 1;
-    
-    function getDistance(touches) {
-        let dx = touches[0].clientX - touches[1].clientX;
-        let dy = touches[0].clientY - touches[1].clientY;
-        return Math.hypot(dx, dy);
-    }
-    
-    canvas.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            initialDistance = getDistance(e.touches);
-            initialScale = imageScale;
-        } else if (e.touches.length === 1) {
-            isDragging = true;
-            dragStart.x = e.touches[0].clientX - imageX;
-            dragStart.y = e.touches[0].clientY - imageY;
-        }
-    });
-    
-    canvas.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            let newDistance = getDistance(e.touches);
-            let scaleFactor = newDistance / initialDistance;
-            imageScale = Math.min(5, Math.max(0.5, initialScale * scaleFactor));
-            drawImageOnCanvas();
-        } else if (e.touches.length === 1 && isDragging) {
-            e.preventDefault();
-            imageX = e.touches[0].clientX - dragStart.x;
-            imageY = e.touches[0].clientY - dragStart.y;
-            drawImageOnCanvas();
-        }
-    });
-    
-    canvas.addEventListener('touchend', () => {
-        isDragging = false;
-    });
-    
-    // === Upload ===
-    function updatePreview(dataUrl, name, size, format) {
-        img.src = dataUrl;
-        img.onload = () => {
-            canvas.style.display = 'block';
-            previewPlaceholderDiv.style.display = 'none';
-            imageScale = 1;
-            imageX = 0;
-            imageY = 0;
-            cropModeActive = false;
-            cropOverlay.classList.remove('active');
-            initCropper();
-        };
-        document.getElementById('fileInfo').style.display = 'block';
-        document.getElementById('fileInfo').innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
-        document.getElementById('menuPreviewImg').src = dataUrl;
-        document.getElementById('menuPreviewImg').style.display = 'block';
-        document.getElementById('menuPreviewPlaceholder').style.display = 'none';
-        document.getElementById('menuFileInfo').style.display = 'block';
-        document.getElementById('menuFileInfo').innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
-        document.getElementById('slogan').classList.add('hidden');
-    }
-    
-    function handleFile(file) {
-        if (!file || !file.type.startsWith('image/')) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target.result;
-            const format = file.type.split('/')[1].toUpperCase();
-            updatePreview(dataUrl, file.name, file.size, format);
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    document.getElementById('previewArea').addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = (e) => {
-            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
-        };
-        input.click();
-    });
-    
-    window.addEventListener('resize', () => {
-        if (img.src) initCropper();
-    });
-    
-    // === Menu Logic ===
-    const menuOverlayDiv = document.getElementById('menuOverlay');
-    const menuTitleSpan = document.getElementById('menuTitle');
-    const backBtn = document.getElementById('backBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const menuSectionsDiv = document.getElementById('menuSections');
-    const header = document.getElementById('header');
-    let activeMenu = null;
+    let currentImageData = null;
     let openSectionId = null;
     let selectedAspect = 'free';
-    
+
     const aspectRatios = [
         { id: 'free', label: 'Свободный', number: '✂️' },
         { id: '1:1', label: '1:1', number: '1:1' },
@@ -707,7 +408,63 @@
         { id: '9:16', label: '9:16', number: '9:16' },
         { id: '16:9', label: '16:9', number: '16:9' }
     ];
+
+    function updatePreview(dataUrl, name, size, format) {
+        currentImageData = dataUrl;
+        
+        previewImg.src = dataUrl;
+        previewImg.style.display = 'block';
+        previewPlaceholder.style.display = 'none';
+        fileInfoDiv.style.display = 'block';
+        fileInfoDiv.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
+        
+        menuPreviewImg.src = dataUrl;
+        menuPreviewImg.style.display = 'block';
+        menuPreviewPlaceholder.style.display = 'none';
+        menuFileInfo.style.display = 'block';
+        menuFileInfo.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
+        
+        slogan.classList.add('hidden');
+    }
+
+    function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            const format = file.type.split('/')[1].toUpperCase();
+            updatePreview(dataUrl, file.name, file.size, format);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    uploadZone.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+        };
+        input.click();
+    });
+
+    // === Меню ===
+    const menuOverlay = document.getElementById('menuOverlay');
+    const menuTitleSpan = document.getElementById('menuTitle');
+    const backBtn = document.getElementById('backBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const menuSectionsDiv = document.getElementById('menuSections');
+    const header = document.getElementById('header');
     
+    let activeMenu = null;
+
+    const menuNames = {
+        edit: 'Редактирование фото',
+        'remove-bg': 'Удаление фона',
+        inpaint: 'Дорисовка фото',
+        'replace-bg': 'Замена фона'
+    };
+
     const sections = [
         { id: 'crop', title: 'Кадрирование', enabled: true },
         { id: 'correction', title: 'Коррекция', enabled: false },
@@ -717,7 +474,7 @@
         { id: 'tools', title: 'Инструменты', enabled: false },
         { id: 'more', title: 'Дополнительно', enabled: false }
     ];
-    
+
     function renderCropTools() {
         return `
             <div class="aspect-grid">
@@ -728,27 +485,14 @@
                 `).join('')}
             </div>
             <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                Выберите пропорцию для обрезки<br>
-                Используйте жесты для масштабирования и перемещения
+                Выберите пропорцию для обрезки
             </div>
         `;
     }
-    
-    function enableCropMode() {
-        cropModeActive = true;
-        cropOverlay.classList.add('active');
-        initCropRect();
-        updateCropUI();
-    }
-    
-    function disableCropMode() {
-        cropModeActive = false;
-        cropOverlay.classList.remove('active');
-    }
-    
+
     function renderSections() {
         menuSectionsDiv.innerHTML = sections.map(section => `
-            <div class="section-item ${!section.enabled ? 'disabled-section' : ''}">
+            <div class="section-item ${!section.enabled ? 'disabled-section' : ''}" data-section-id="${section.id}">
                 <button class="section-btn" data-section="${section.id}" ${!section.enabled ? 'disabled' : ''}>
                     <span>${section.title}</span>
                     ${section.enabled ? '<span class="section-arrow" id="arrow-' + section.id + '">▼</span>' : '<span class="section-arrow" style="opacity:0.5;">🔒</span>'}
@@ -777,16 +521,10 @@
                     contentDiv.classList.remove('open');
                     arrowSpan.classList.remove('open');
                     openSectionId = null;
-                    if (sectionId === 'crop') {
-                        disableCropMode();
-                    }
                 } else {
                     contentDiv.classList.add('open');
                     arrowSpan.classList.add('open');
                     openSectionId = sectionId;
-                    if (sectionId === 'crop' && img.src) {
-                        enableCropMode();
-                    }
                 }
             });
         });
@@ -796,7 +534,6 @@
                 e.stopPropagation();
                 const aspectId = btn.dataset.aspect;
                 selectedAspect = aspectId;
-                currentAspect = aspectId;
                 
                 document.querySelectorAll('.aspect-btn').forEach(b => {
                     if (b.dataset.aspect === aspectId) {
@@ -806,44 +543,49 @@
                     }
                 });
                 
-                if (aspectId !== 'free' && cropModeActive) {
-                    applyAspectRatio();
-                }
-                
                 console.log('Выбран формат:', aspectId);
             });
         });
     }
-    
+
     function openMenu(menuId) {
+        // Показываем меню только для кнопки "Редактирование"
         if (menuId !== 'edit') {
             alert('Функция в разработке. Доступно только редактирование фото.');
             return;
         }
+        
         activeMenu = menuId;
-        menuTitleSpan.innerText = 'Редактирование фото';
-        menuOverlayDiv.classList.add('active');
+        menuTitleSpan.innerText = menuNames[activeMenu] || 'Редактирование';
+        
+        menuOverlay.classList.add('active');
         header.classList.add('hide-header');
+        
         openSectionId = null;
         renderSections();
     }
-    
+
     function closeMenu() {
-        menuOverlayDiv.classList.remove('active');
+        menuOverlay.classList.remove('active');
         header.classList.remove('hide-header');
         activeMenu = null;
         openSectionId = null;
-        disableCropMode();
     }
-    
+
     document.querySelectorAll('.tool-icon').forEach(btn => {
         btn.addEventListener('click', () => {
             openMenu(btn.dataset.menu);
         });
     });
+
+    backBtn.addEventListener('click', () => {
+        closeMenu();
+    });
     
-    backBtn.addEventListener('click', closeMenu);
-    saveBtn.addEventListener('click', () => alert('Функция сохранения в разработке'));
+    saveBtn.addEventListener('click', () => {
+        console.log('Сохранение изображения');
+        alert('Функция сохранения в разработке');
+    });
 </script>
 
 </body>
