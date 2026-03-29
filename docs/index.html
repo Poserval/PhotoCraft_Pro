@@ -127,6 +127,48 @@
         .preview-image:active {
             cursor: grabbing;
         }
+        
+        /* Затемнение вне рамки */
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Рамка кадрирования */
+        .crop-frame {
+            position: absolute;
+            border: 2px solid white;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            cursor: move;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        
+        /* Уголки рамки */
+        .crop-handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 2px solid #2563eb;
+            border-radius: 4px;
+            pointer-events: auto;
+        }
+        .crop-handle.nw { top: -10px; left: -10px; cursor: nw-resize; }
+        .crop-handle.n { top: -10px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .crop-handle.ne { top: -10px; right: -10px; cursor: ne-resize; }
+        .crop-handle.w { top: 50%; left: -10px; transform: translateY(-50%); cursor: w-resize; }
+        .crop-handle.e { top: 50%; right: -10px; transform: translateY(-50%); cursor: e-resize; }
+        .crop-handle.sw { bottom: -10px; left: -10px; cursor: sw-resize; }
+        .crop-handle.s { bottom: -10px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .crop-handle.se { bottom: -10px; right: -10px; cursor: se-resize; }
+        
         .file-info {
             margin-top: 12px;
             font-size: 12px;
@@ -376,6 +418,17 @@
             <div class="image-container" id="imageContainer">
                 <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
             </div>
+            <div id="cropOverlay" class="crop-overlay" style="display: none;"></div>
+            <div id="cropFrame" class="crop-frame" style="display: none;">
+                <div class="crop-handle nw"></div>
+                <div class="crop-handle n"></div>
+                <div class="crop-handle ne"></div>
+                <div class="crop-handle w"></div>
+                <div class="crop-handle e"></div>
+                <div class="crop-handle sw"></div>
+                <div class="crop-handle s"></div>
+                <div class="crop-handle se"></div>
+            </div>
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
     </div>
@@ -423,15 +476,20 @@
     const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
     const menuFileInfo = document.getElementById('menuFileInfo');
     
+    // Элементы кадрирования
+    const cropOverlay = document.getElementById('cropOverlay');
+    const cropFrame = document.getElementById('cropFrame');
+    
     let currentImageData = null;
     let openSectionId = null;
     let selectedAspect = 'free';
     let isMenuOpen = false;
+    let isCropActive = false;
     
-    // Получаем текущее активное изображение
-    function getActiveImage() {
-        return isMenuOpen ? menuPreviewImg : previewImg;
-    }
+    // Переменные для рамки
+    let frameRect = { x: 0, y: 0, w: 0, h: 0 };
+    let activeHandle = null;
+    let startX, startY, startFrameX, startFrameY, startFrameW, startFrameH;
     
     // Переменные для масштабирования и перемещения
     let currentScale = 1;
@@ -445,21 +503,23 @@
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
-    let activeElement = null;
     
-    // Получаем контейнер для текущего изображения
+    // Получаем текущее активное изображение
+    function getActiveImage() {
+        return isMenuOpen ? menuPreviewImg : previewImg;
+    }
+    
     function getActiveContainer() {
         return isMenuOpen ? document.querySelector('.menu-preview') : previewArea;
     }
     
+    // Функции масштабирования
     function getScaledImageRect(img, container) {
         if (!img.complete || img.naturalWidth === 0) return { width: 0, height: 0 };
         
         const naturalWidth = img.naturalWidth;
         const naturalHeight = img.naturalHeight;
-        
         const containerRect = container.getBoundingClientRect();
-        
         const containerAspect = containerRect.width / containerRect.height;
         const imageAspect = naturalWidth / naturalHeight;
         
@@ -472,10 +532,7 @@
             baseWidth = containerRect.height * imageAspect;
         }
         
-        const scaledWidth = baseWidth * currentScale;
-        const scaledHeight = baseHeight * currentScale;
-        
-        return { width: scaledWidth, height: scaledHeight };
+        return { width: baseWidth * currentScale, height: baseHeight * currentScale };
     }
     
     function clampTranslate(img, container) {
@@ -485,23 +542,17 @@
         let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
         let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
         
-        let newX = currentTranslateX;
-        let newY = currentTranslateY;
-        
         if (scaledWidth <= containerRect.width) {
-            newX = 0;
+            currentTranslateX = 0;
         } else {
-            newX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
+            currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
         }
         
         if (scaledHeight <= containerRect.height) {
-            newY = 0;
+            currentTranslateY = 0;
         } else {
-            newY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
+            currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
         }
-        
-        currentTranslateX = newX;
-        currentTranslateY = newY;
         
         applyTransform(img);
     }
@@ -519,14 +570,10 @@
     
     function zoomFromCenter(newScale, img, container) {
         if (!img.complete || img.naturalWidth === 0) return;
-        
-        const oldScale = currentScale;
         const newScaleClamped = Math.max(1, newScale);
+        if (newScaleClamped === currentScale) return;
         
-        if (newScaleClamped === oldScale) return;
-        
-        const scaleRatio = newScaleClamped / oldScale;
-        
+        const scaleRatio = newScaleClamped / currentScale;
         currentTranslateX = currentTranslateX * scaleRatio;
         currentTranslateY = currentTranslateY * scaleRatio;
         currentScale = newScaleClamped;
@@ -535,8 +582,141 @@
         clampTranslate(img, container);
     }
     
+    // Функции кадрирования
+    function updateFramePosition() {
+        const container = previewArea;
+        const containerRect = container.getBoundingClientRect();
+        
+        if (frameRect.w === 0 || frameRect.h === 0) {
+            frameRect = {
+                x: containerRect.width * 0.1,
+                y: containerRect.height * 0.1,
+                w: containerRect.width * 0.8,
+                h: containerRect.height * 0.8
+            };
+        }
+        
+        cropFrame.style.left = frameRect.x + 'px';
+        cropFrame.style.top = frameRect.y + 'px';
+        cropFrame.style.width = frameRect.w + 'px';
+        cropFrame.style.height = frameRect.h + 'px';
+    }
+    
+    function initCrop() {
+        const container = previewArea;
+        const containerRect = container.getBoundingClientRect();
+        
+        frameRect = {
+            x: containerRect.width * 0.1,
+            y: containerRect.height * 0.1,
+            w: containerRect.width * 0.8,
+            h: containerRect.height * 0.8
+        };
+        
+        updateFramePosition();
+        cropOverlay.style.display = 'block';
+        cropFrame.style.display = 'block';
+        isCropActive = true;
+    }
+    
+    function disableCrop() {
+        cropOverlay.style.display = 'none';
+        cropFrame.style.display = 'none';
+        isCropActive = false;
+    }
+    
+    // Обработчики касаний для рамки
+    function startResize(e, handle) {
+        e.stopPropagation();
+        activeHandle = handle;
+        startX = e.touches ? e.touches[0].clientX : e.clientX;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        startFrameX = frameRect.x;
+        startFrameY = frameRect.y;
+        startFrameW = frameRect.w;
+        startFrameH = frameRect.h;
+    }
+    
+    function startMove(e) {
+        e.stopPropagation();
+        activeHandle = 'move';
+        startX = e.touches ? e.touches[0].clientX : e.clientX;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        startFrameX = frameRect.x;
+        startFrameY = frameRect.y;
+    }
+    
+    function onResizeMove(e) {
+        if (!activeHandle) return;
+        
+        const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+        const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+        const dx = currentX - startX;
+        const dy = currentY - startY;
+        
+        const container = previewArea;
+        const containerRect = container.getBoundingClientRect();
+        
+        if (activeHandle === 'move') {
+            let newX = startFrameX + dx;
+            let newY = startFrameY + dy;
+            newX = Math.max(0, Math.min(newX, containerRect.width - frameRect.w));
+            newY = Math.max(0, Math.min(newY, containerRect.height - frameRect.h));
+            frameRect.x = newX;
+            frameRect.y = newY;
+        } else {
+            let newW = startFrameW;
+            let newH = startFrameH;
+            let newX = startFrameX;
+            let newY = startFrameY;
+            
+            if (activeHandle.includes('e')) {
+                newW = Math.max(50, startFrameW + dx);
+            }
+            if (activeHandle.includes('w')) {
+                newW = Math.max(50, startFrameW - dx);
+                newX = startFrameX + (startFrameW - newW);
+            }
+            if (activeHandle.includes('s')) {
+                newH = Math.max(50, startFrameH + dy);
+            }
+            if (activeHandle.includes('n')) {
+                newH = Math.max(50, startFrameH - dy);
+                newY = startFrameY + (startFrameH - newH);
+            }
+            
+            newX = Math.max(0, Math.min(newX, containerRect.width - newW));
+            newY = Math.max(0, Math.min(newY, containerRect.height - newH));
+            
+            frameRect.x = newX;
+            frameRect.y = newY;
+            frameRect.w = newW;
+            frameRect.h = newH;
+        }
+        
+        updateFramePosition();
+    }
+    
+    function endResize() {
+        activeHandle = null;
+    }
+    
+    // Обработчики касаний для масштабирования
     function handleTouchStart(e) {
         if (!currentImageData) return;
+        
+        // Если кадрирование активно и цель — рамка или её углы
+        if (isCropActive) {
+            let target = e.target;
+            if (target.classList && target.classList.contains('crop-handle')) {
+                startResize(e, target.classList[1]);
+                return;
+            }
+            if (target === cropFrame || target.parentElement === cropFrame) {
+                startMove(e);
+                return;
+            }
+        }
         
         e.stopPropagation();
         e.preventDefault();
@@ -553,20 +733,23 @@
             initialScale = currentScale;
             isZooming = true;
             isDragging = false;
-            activeElement = img;
         } else if (e.touches.length === 1) {
             if (currentScale > 1) {
                 isDragging = true;
                 dragStartX = e.touches[0].clientX - currentTranslateX;
                 dragStartY = e.touches[0].clientY - currentTranslateY;
-                activeElement = img;
             }
         }
     }
     
     function handleTouchMove(e) {
-        if (!currentImageData) return;
+        if (isCropActive && activeHandle) {
+            e.preventDefault();
+            onResizeMove(e);
+            return;
+        }
         
+        if (!currentImageData) return;
         if (!isZooming && !isDragging) return;
         
         e.stopPropagation();
@@ -582,7 +765,6 @@
             const dy = touch1.clientY - touch2.clientY;
             const newDistance = Math.hypot(dx, dy);
             const newScale = initialScale * (newDistance / initialDistance);
-            
             zoomFromCenter(newScale, img, container);
         } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
             currentTranslateX = e.touches[0].clientX - dragStartX;
@@ -592,10 +774,12 @@
     }
     
     function handleTouchEnd(e) {
-        e.stopPropagation();
+        if (activeHandle) {
+            endResize();
+        }
+        
         isZooming = false;
         isDragging = false;
-        activeElement = null;
         
         if (currentScale < 1) {
             const img = getActiveImage();
@@ -742,6 +926,11 @@
                     contentDiv.classList.add('open');
                     arrowSpan.classList.add('open');
                     openSectionId = sectionId;
+                    
+                    // При открытии раздела "Кадрирование" активируем рамку
+                    if (sectionId === 'crop' && currentImageData) {
+                        initCrop();
+                    }
                 }
             });
         });
@@ -778,7 +967,6 @@
         header.classList.add('hide-header');
         isMenuOpen = true;
         
-        // Синхронизируем трансформацию с меню
         setTimeout(() => {
             const img = menuPreviewImg;
             const container = document.querySelector('.menu-preview');
@@ -797,7 +985,9 @@
         isMenuOpen = false;
         openSectionId = null;
         
-        // Синхронизируем трансформацию обратно
+        // Отключаем кадрирование при закрытии меню
+        disableCrop();
+        
         setTimeout(() => {
             const img = previewImg;
             const container = previewArea;
@@ -821,7 +1011,7 @@
         alert('Функция сохранения в разработке');
     });
     
-    // Добавляем обработчики для обоих изображений
+    // Добавляем обработчики
     previewImg.addEventListener('touchstart', handleTouchStart);
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
@@ -830,21 +1020,11 @@
     menuPreviewImg.addEventListener('touchmove', handleTouchMove);
     menuPreviewImg.addEventListener('touchend', handleTouchEnd);
     
-    // Блокируем стандартный зум
     previewArea.addEventListener('touchstart', (e) => {
         if (e.target === previewArea && currentImageData) {
             e.preventDefault();
         }
     });
-    
-    const menuPreviewContainer = document.querySelector('.menu-preview');
-    if (menuPreviewContainer) {
-        menuPreviewContainer.addEventListener('touchstart', (e) => {
-            if (e.target === menuPreviewContainer && currentImageData) {
-                e.preventDefault();
-            }
-        });
-    }
 </script>
 
 </body>
