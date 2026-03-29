@@ -140,16 +140,8 @@
             font-size: 14px;
         }
 
-        /* Кадрирование */
+        /* Кадрирование - затемнение ТОЛЬКО вокруг рамки */
         .crop-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            pointer-events: none;
-            z-index: 10;
             display: none;
         }
         .crop-frame {
@@ -387,12 +379,12 @@
         setTimeout(() => clampTranslate(), 50);
     }
 
-    // === РАМКА КАДРИРОВАНИЯ С ФИКСИРОВАННЫМИ ПРОПОРЦИЯМИ (1:1) ===
+    // === РАМКА КАДРИРОВАНИЯ ===
     let frameRect = { x: 50, y: 50, w: 200, h: 200 };
     let activeHandle = null;
     let startX, startY, startRect;
     let currentAspect = '1:1';
-    let aspectRatio = 1; // 1:1
+    let aspectRatio = 1;
 
     function getAspectRatio(aspect) {
         switch(aspect) {
@@ -403,7 +395,7 @@
             case '4:3': return 4/3;
             case '9:16': return 9/16;
             case '16:9': return 16/9;
-            default: return null; // свободный режим
+            default: return null;
         }
     }
 
@@ -413,29 +405,6 @@
         cropFrame.style.top = frameRect.y + 'px';
         cropFrame.style.width = frameRect.w + 'px';
         cropFrame.style.height = frameRect.h + 'px';
-    }
-
-    function resizeWithAspect(handle, newW, newH, startW, startH, startX, startY) {
-        let result = { w: newW, h: newH, x: startX, y: startY };
-        
-        if (aspectRatio !== null) {
-            // Фиксированные пропорции
-            if (handle.includes('e') || handle.includes('w')) {
-                result.h = newW / aspectRatio;
-            } else if (handle.includes('s') || handle.includes('n')) {
-                result.w = newH * aspectRatio;
-            }
-            
-            // Корректируем позицию при изменении размера с разных сторон
-            if (handle.includes('w')) {
-                result.x = startX + (startW - result.w);
-            }
-            if (handle.includes('n')) {
-                result.y = startY + (startH - result.h);
-            }
-        }
-        
-        return result;
     }
 
     function initCrop() {
@@ -448,12 +417,10 @@
             h: size 
         };
         updateFramePosition();
-        cropOverlay.style.display = 'block';
         cropFrame.style.display = 'block';
     }
 
     function disableCrop() {
-        cropOverlay.style.display = 'none';
         cropFrame.style.display = 'none';
         activeHandle = null;
     }
@@ -506,7 +473,6 @@
                 newY = startRect.y + (startRect.h - newH);
             }
             
-            // Применяем пропорции
             if (aspectRatio !== null) {
                 if (activeHandle.includes('e') || activeHandle.includes('w')) {
                     newH = newW / aspectRatio;
@@ -569,8 +535,7 @@
             currentAspect = aspect;
             aspectRatio = getAspectRatio(aspect);
             
-            if (aspectRatio !== null && cropOverlay.style.display === 'block') {
-                // Пересчитываем рамку с новыми пропорциями, сохраняя центр
+            if (aspectRatio !== null && cropFrame.style.display === 'block') {
                 const containerRect = previewWrapper.getBoundingClientRect();
                 const centerX = frameRect.x + frameRect.w / 2;
                 const centerY = frameRect.y + frameRect.h / 2;
