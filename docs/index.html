@@ -17,6 +17,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            touch-action: pan-x pan-y; /* Разрешаем прокрутку страницы, но не зуминг */
         }
 
         .header {
@@ -89,7 +90,7 @@
             width: 100%;
             overflow: hidden;
             position: relative;
-            touch-action: none;
+            touch-action: none; /* Отключаем стандартный зум браузера в области ОПП */
         }
         .preview-area:active {
             background: #e5e7eb;
@@ -121,6 +122,7 @@
             transform-origin: center center;
             cursor: grab;
             will-change: transform;
+            transition: transform 0.05s ease-out;
         }
         .preview-image:active {
             cursor: grabbing;
@@ -153,6 +155,8 @@
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            user-select: none;
+            touch-action: manipulation;
         }
         .tool-icon:active {
             transform: scale(0.96);
@@ -503,10 +507,8 @@
         
         if (newScaleClamped === oldScale) return;
         
-        // Масштабируем от центра
         const scaleRatio = newScaleClamped / oldScale;
         
-        // Смещение также масштабируется от центра
         currentTranslateX = currentTranslateX * scaleRatio;
         currentTranslateY = currentTranslateY * scaleRatio;
         currentScale = newScaleClamped;
@@ -516,8 +518,10 @@
     }
     
     function handleTouchStart(e) {
-        // Разрешаем масштабирование только если есть загруженное изображение
         if (!currentImageData) return;
+        
+        // Предотвращаем всплытие события, чтобы браузер не зумал страницу
+        e.stopPropagation();
         
         if (e.touches.length === 2) {
             e.preventDefault();
@@ -542,6 +546,8 @@
     function handleTouchMove(e) {
         if (!currentImageData) return;
         
+        e.stopPropagation();
+        
         if (isZooming && e.touches.length === 2) {
             e.preventDefault();
             const touch1 = e.touches[0];
@@ -561,6 +567,7 @@
     }
     
     function handleTouchEnd(e) {
+        e.stopPropagation();
         isZooming = false;
         isDragging = false;
         
@@ -763,10 +770,17 @@
         alert('Функция сохранения в разработке');
     });
     
-    // Добавляем обработчики для масштабирования к previewImg постоянно
-    previewImg.addEventListener('touchstart', handleTouchStart, { passive: false });
-    previewImg.addEventListener('touchmove', handleTouchMove, { passive: false });
+    // Добавляем обработчики для масштабирования к previewImg
+    previewImg.addEventListener('touchstart', handleTouchStart);
+    previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
+    
+    // Также блокируем зум на previewArea
+    previewArea.addEventListener('touchstart', (e) => {
+        if (e.target === previewArea && currentImageData) {
+            e.preventDefault();
+        }
+    });
 </script>
 
 </body>
