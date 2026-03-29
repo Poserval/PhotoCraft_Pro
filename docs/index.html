@@ -17,6 +17,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            touch-action: pan-x pan-y;
         }
 
         .header {
@@ -85,6 +86,7 @@
             width: 100%;
             overflow: hidden;
             position: relative;
+            touch-action: none;
         }
         .preview-area:active {
             background: #e5e7eb;
@@ -96,6 +98,15 @@
             text-align: center;
             padding: 20px;
         }
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
         .preview-image {
             max-width: 100%;
             max-height: 100%;
@@ -104,7 +115,12 @@
             object-fit: contain;
             border-radius: 18px;
             display: block;
-            margin: auto;
+            transform-origin: center center;
+            cursor: grab;
+            transition: transform 0.05s ease-out;
+        }
+        .preview-image:active {
+            cursor: grabbing;
         }
         .file-info {
             margin-top: 12px;
@@ -134,10 +150,16 @@
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            user-select: none;
+            touch-action: manipulation;
         }
         .tool-icon:active {
             transform: scale(0.96);
             background: #f3f4f6;
+        }
+        .tool-icon.disabled {
+            opacity: 0.5;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -158,16 +180,18 @@
             <div id="previewPlaceholder" class="preview-placeholder">
                 📸 Нажмите для загрузки изображения
             </div>
-            <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
+            <div class="image-container">
+                <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
+            </div>
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
     </div>
 
     <div class="tools-row">
+        <div class="tool-icon" data-tool="edit">✏️</div>
         <div class="tool-icon" data-tool="crop">✂️</div>
-        <div class="tool-icon" data-tool="edit" style="opacity: 0.5;">🎨</div>
-        <div class="tool-icon" data-tool="text" style="opacity: 0.5;">📝</div>
-        <div class="tool-icon" data-tool="remove-bg" style="opacity: 0.5;">✨</div>
+        <div class="tool-icon disabled" data-tool="inpaint">🖌️</div>
+        <div class="tool-icon disabled" data-tool="replace-bg">🖼️</div>
     </div>
 </div>
 
@@ -177,9 +201,112 @@
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const fileInfoDiv = document.getElementById('fileInfo');
     const slogan = document.getElementById('slogan');
+    const previewArea = document.getElementById('uploadZone');
     
     let currentImageData = null;
     
+    // === МАСШТАБИРОВАНИЕ ===
+    let currentScale = 1;
+    let currentTranslateX = 0;
+    let currentTranslateY = 0;
+    let initialDistance = 0;
+    let initialScale = 1;
+    let isZooming = false;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    
+    function getScaledImageRect() {
+        if (!previewImg.complete || previewImg.naturalWidth === 0) return { width: 0, height: 0 };
+        const naturalWidth = previewImg.naturalWidth, naturalHeight = previewImg.naturalHeight;
+        const containerRect = previewArea.getBoundingClientRect();
+        const containerAspect = containerRect.width / containerRect.height;
+        const imageAspect = naturalWidth / naturalHeight;
+        let baseWidth, baseHeight;
+        if (imageAspect > containerAspect) {
+            baseWidth = containerRect.width;
+            baseHeight = containerRect.width / imageAspect;
+        } else {
+            baseHeight = containerRect.height;
+            baseWidth = containerRect.height * imageAspect;
+        }
+        return { width: baseWidth * currentScale, height: baseHeight * currentScale };
+    }
+    
+    function clampTranslate() {
+        const containerRect = previewArea.getBoundingClientRect();
+        const { width: scaledWidth, height: scaledHeight } = getScaledImageRect();
+        let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
+        let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
+        if (scaledWidth <= containerRect.width) currentTranslateX = 0;
+        else currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
+        if (scaledHeight <= containerRect.height) currentTranslateY = 0;
+        else currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
+        previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+    }
+    
+    function resetTransform() {
+        currentScale = 1;
+        currentTranslateX = 0;
+        currentTranslateY = 0;
+        previewImg.style.transform = `translate(0px, 0px) scale(1)`;
+    }
+    
+    function zoomFromCenter(newScale) {
+        if (!previewImg.complete || previewImg.naturalWidth === 0) return;
+        const newScaleClamped = Math.max(1, newScale);
+        if (newScaleClamped === currentScale) return;
+        const scaleRatio = newScaleClamped / currentScale;
+        currentTranslateX = currentTranslateX * scaleRatio;
+        currentTranslateY = currentTranslateY * scaleRatio;
+        currentScale = newScaleClamped;
+        previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+        clampTranslate();
+    }
+    
+    function handleTouchStart(e) {
+        if (!currentImageData) return;
+        e.preventDefault();
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            initialDistance = Math.hypot(dx, dy);
+            initialScale = currentScale;
+            isZooming = true;
+            isDragging = false;
+        } else if (e.touches.length === 1) {
+            if (currentScale > 1) {
+                isDragging = true;
+                dragStartX = e.touches[0].clientX - currentTranslateX;
+                dragStartY = e.touches[0].clientY - currentTranslateY;
+            }
+        }
+    }
+    
+    function handleTouchMove(e) {
+        if (!currentImageData) return;
+        if (!isZooming && !isDragging) return;
+        e.preventDefault();
+        if (isZooming && e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const newDistance = Math.hypot(dx, dy);
+            zoomFromCenter(initialScale * (newDistance / initialDistance));
+        } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
+            currentTranslateX = e.touches[0].clientX - dragStartX;
+            currentTranslateY = e.touches[0].clientY - dragStartY;
+            clampTranslate();
+        }
+    }
+    
+    function handleTouchEnd(e) {
+        isZooming = false;
+        isDragging = false;
+        if (currentScale < 1) resetTransform();
+        setTimeout(() => clampTranslate(), 50);
+    }
+    
+    // === ЗАГРУЗКА ФОТО ===
     function updatePreview(dataUrl, name, size, format) {
         currentImageData = dataUrl;
         previewImg.src = dataUrl;
@@ -188,6 +315,7 @@
         fileInfoDiv.style.display = 'block';
         fileInfoDiv.innerText = `${name} • ${(size/1024/1024).toFixed(2)} MB • ${format}`;
         slogan.classList.add('hidden');
+        resetTransform();
         
         // Сохраняем в localStorage для передачи на другие страницы
         localStorage.setItem('currentImage', dataUrl);
@@ -214,22 +342,26 @@
         input.click();
     });
     
-    // Переход на страницу инструмента (только для кадрирования)
-document.querySelectorAll('.tool-icon').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tool = btn.dataset.tool;
-        if (tool === 'crop') {
-            if (currentImageData) {
-                // ПРЯМАЯ ССЫЛКА НА ФАЙЛ
-                window.location.href = 'pages/crop.html';
-            } else {
-                alert('Сначала загрузите изображение');
+    // Обработчики масштабирования
+    previewImg.addEventListener('touchstart', handleTouchStart);
+    previewImg.addEventListener('touchmove', handleTouchMove);
+    previewImg.addEventListener('touchend', handleTouchEnd);
+    
+    // Переход на страницу кадрирования
+    document.querySelectorAll('.tool-icon').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tool = btn.dataset.tool;
+            if (tool === 'crop') {
+                if (currentImageData) {
+                    window.location.href = 'pages/crop.html';
+                } else {
+                    alert('Сначала загрузите изображение');
+                }
+            } else if (tool === 'edit') {
+                alert('Функция в разработке');
             }
-        } else {
-            alert('Функция в разработке');
-        }
+        });
     });
-});
 </script>
 </body>
 </html>
