@@ -273,22 +273,41 @@
         .section-content.open {
             display: block;
         }
-        .tools-placeholder {
-            text-align: center;
-            padding: 20px;
-            color: #6b7280;
-            font-size: 13px;
+        
+        /* Сетка форматов */
+        .aspect-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 8px;
         }
-        .test-block {
-            background: #dc2626;
-            color: white;
-            padding: 16px;
+        .aspect-btn {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 8px;
             text-align: center;
-            border-radius: 14px;
-            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
             font-size: 14px;
+            font-weight: 500;
+            color: #374151;
         }
-        .coming-soon {
+        .aspect-btn:active {
+            background: #e5e7eb;
+            transform: scale(0.96);
+        }
+        .aspect-btn.selected {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .aspect-icon {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .tools-placeholder {
             text-align: center;
             padding: 20px;
             color: #6b7280;
@@ -344,10 +363,7 @@
     </div>
     
     <div class="menu-scrollable">
-        <div id="menuSections" class="menu-sections">
-            <!-- Секции будут добавлены через JS -->
-        </div>
-        <div id="sectionContent"></div>
+        <div id="menuSections" class="menu-sections"></div>
     </div>
 </div>
 
@@ -365,6 +381,18 @@
     
     let currentImageData = null;
     let openSectionId = null;
+    let selectedAspect = 'free';
+
+    const aspectRatios = [
+        { id: 'free', label: 'Свободный', icon: '✂️' },
+        { id: '1:1', label: '1:1', icon: '⬜' },
+        { id: '2:3', label: '2:3', icon: '▯' },
+        { id: '3:2', label: '3:2', icon: '▮' },
+        { id: '3:4', label: '3:4', icon: '▯' },
+        { id: '4:3', label: '4:3', icon: '▮' },
+        { id: '9:16', label: '9:16', icon: '▯' },
+        { id: '16:9', label: '16:9', icon: '▮' }
+    ];
 
     function updatePreview(dataUrl, name, size, format) {
         currentImageData = dataUrl;
@@ -431,6 +459,22 @@
         { id: 'more', title: 'Дополнительно' }
     ];
 
+    function renderCropTools() {
+        return `
+            <div class="aspect-grid">
+                ${aspectRatios.map(ratio => `
+                    <button class="aspect-btn ${selectedAspect === ratio.id ? 'selected' : ''}" data-aspect="${ratio.id}">
+                        <span class="aspect-icon">${ratio.icon}</span>
+                        <span>${ratio.label}</span>
+                    </button>
+                `).join('')}
+            </div>
+            <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
+                Выберите пропорцию для обрезки
+            </div>
+        `;
+    }
+
     function renderSections() {
         menuSectionsDiv.innerHTML = sections.map(section => `
             <div class="section-item" data-section-id="${section.id}">
@@ -439,9 +483,7 @@
                     <span class="section-arrow" id="arrow-${section.id}">▼</span>
                 </button>
                 <div class="section-content" id="content-${section.id}">
-                    <div class="tools-placeholder">
-                        🛠 Инструменты раздела "${section.title}" в разработке
-                    </div>
+                    ${section.id === 'crop' ? renderCropTools() : `<div class="tools-placeholder">🛠 Инструменты раздела "${section.title}" в разработке</div>`}
                 </div>
             </div>
         `).join('');
@@ -454,7 +496,6 @@
                 const contentDiv = document.getElementById(`content-${sectionId}`);
                 const arrowSpan = document.getElementById(`arrow-${sectionId}`);
                 
-                // Если открыта другая секция — закрываем её
                 if (openSectionId && openSectionId !== sectionId) {
                     const prevContent = document.getElementById(`content-${openSectionId}`);
                     const prevArrow = document.getElementById(`arrow-${openSectionId}`);
@@ -462,7 +503,6 @@
                     if (prevArrow) prevArrow.classList.remove('open');
                 }
                 
-                // Переключаем текущую секцию
                 if (contentDiv.classList.contains('open')) {
                     contentDiv.classList.remove('open');
                     arrowSpan.classList.remove('open');
@@ -474,6 +514,27 @@
                 }
             });
         });
+        
+        // Добавляем обработчики для кнопок форматов
+        document.querySelectorAll('.aspect-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const aspectId = btn.dataset.aspect;
+                selectedAspect = aspectId;
+                
+                // Обновляем выделение
+                document.querySelectorAll('.aspect-btn').forEach(b => {
+                    if (b.dataset.aspect === aspectId) {
+                        b.classList.add('selected');
+                    } else {
+                        b.classList.remove('selected');
+                    }
+                });
+                
+                console.log('Выбран формат:', aspectId);
+                // Здесь позже добавим применение обрезки к изображению
+            });
+        });
     }
 
     function openMenu(menuId) {
@@ -483,7 +544,6 @@
         menuOverlay.classList.add('active');
         header.classList.add('hide-header');
         
-        // Сбрасываем открытую секцию при открытии меню
         openSectionId = null;
         renderSections();
     }
