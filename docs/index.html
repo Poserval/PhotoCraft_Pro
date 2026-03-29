@@ -118,7 +118,7 @@
             object-fit: contain;
             border-radius: 18px;
             display: block;
-            transition: transform 0.1s ease-out;
+            transition: transform 0.05s linear;
             transform-origin: 0 0;
             cursor: grab;
             will-change: transform;
@@ -433,37 +433,9 @@
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
-    let lastTouchX = 0;
-    let lastTouchY = 0;
     
-    // Получаем центр изображения в координатах контейнера
-    function getImageCenter() {
-        const container = previewArea;
-        const containerRect = container.getBoundingClientRect();
-        const img = previewImg;
-        const imgRect = img.getBoundingClientRect();
-        
-        return {
-            x: containerRect.left + containerRect.width / 2,
-            y: containerRect.top + containerRect.height / 2
-        };
-    }
-    
-    // Применяем трансформацию
-    function applyTransform() {
-        previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
-    }
-    
-    // Сброс трансформации
-    function resetTransform() {
-        currentScale = 1;
-        currentTranslateX = 0;
-        currentTranslateY = 0;
-        applyTransform();
-    }
-    
-    // Ограничение перемещения
-    function clampTranslate() {
+    // Функция для вычисления ограничений перемещения
+    function getTranslateBounds() {
         const container = previewArea;
         const containerRect = container.getBoundingClientRect();
         const img = previewImg;
@@ -472,33 +444,45 @@
         const scaledWidth = imgRect.width;
         const scaledHeight = imgRect.height;
         
+        let minX = 0, maxX = 0, minY = 0, maxY = 0;
+        
         if (scaledWidth <= containerRect.width) {
-            currentTranslateX = 0;
+            minX = maxX = 0;
         } else {
-            const maxX = (scaledWidth - containerRect.width) / 2;
-            currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
+            // Можно двигать влево до тех пор, пока правый край не покажется
+            maxX = (scaledWidth - containerRect.width) / 2;
+            minX = -maxX;
         }
         
         if (scaledHeight <= containerRect.height) {
-            currentTranslateY = 0;
+            minY = maxY = 0;
         } else {
-            const maxY = (scaledHeight - containerRect.height) / 2;
-            currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
+            maxY = (scaledHeight - containerRect.height) / 2;
+            minY = -maxY;
         }
         
+        return { minX, maxX, minY, maxY };
+    }
+    
+    // Применяем трансформацию
+    function applyTransform() {
+        previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+    }
+    
+    // Ограничение перемещения
+    function clampTranslate() {
+        const bounds = getTranslateBounds();
+        currentTranslateX = Math.max(bounds.minX, Math.min(bounds.maxX, currentTranslateX));
+        currentTranslateY = Math.max(bounds.minY, Math.min(bounds.maxY, currentTranslateY));
         applyTransform();
     }
     
-    // Вычисление точки касания относительно изображения
-    function getTouchPointOnImage(touch, containerRect, imgRect) {
-        const touchX = touch.clientX;
-        const touchY = touch.clientY;
-        
-        // Координаты точки касания относительно изображения
-        const imgX = (touchX - imgRect.left) / imgRect.width;
-        const imgY = (touchY - imgRect.top) / imgRect.height;
-        
-        return { imgX, imgY };
+    // Сброс трансформации
+    function resetTransform() {
+        currentScale = 1;
+        currentTranslateX = 0;
+        currentTranslateY = 0;
+        applyTransform();
     }
     
     // Масштабирование относительно точки касания
@@ -514,9 +498,9 @@
         const centerX = (touch1.clientX + touch2.clientX) / 2;
         const centerY = (touch1.clientY + touch2.clientY) / 2;
         
-        // Координаты точки касания относительно изображения (в процентах от размеров изображения)
-        const touchImgX = (centerX - imgRect.left) / imgRect.width;
-        const touchImgY = (centerY - imgRect.top) / imgRect.height;
+        // Координаты точки касания относительно изображения (в пикселях)
+        const touchImgX = centerX - imgRect.left;
+        const touchImgY = centerY - imgRect.top;
         
         // Сохраняем старый масштаб
         const oldScale = currentScale;
@@ -528,8 +512,8 @@
         const scaleChange = currentScale / oldScale;
         
         // Новое смещение
-        const newTranslateX = centerX - imgRect.left - (centerX - imgRect.left - currentTranslateX) * scaleChange;
-        const newTranslateY = centerY - imgRect.top - (centerY - imgRect.top - currentTranslateY) * scaleChange;
+        let newTranslateX = centerX - imgRect.left - (touchImgX) * scaleChange + currentTranslateX;
+        let newTranslateY = centerY - imgRect.top - (touchImgY) * scaleChange + currentTranslateY;
         
         currentTranslateX = newTranslateX;
         currentTranslateY = newTranslateY;
@@ -552,13 +536,11 @@
             initialTranslateY = currentTranslateY;
             isZooming = true;
             isDragging = false;
-        } else if (e.touches.length === 1 && currentScale > 1) {
+        } else if (e.touches.length === 1) {
             e.preventDefault();
             isDragging = true;
             dragStartX = e.touches[0].clientX - currentTranslateX;
             dragStartY = e.touches[0].clientY - currentTranslateY;
-            lastTouchX = e.touches[0].clientX;
-            lastTouchY = e.touches[0].clientY;
         }
     }
     
@@ -574,7 +556,7 @@
             const scale = initialScale * (newDistance / initialDistance);
             
             zoomAtPoint(scale, touch1, touch2);
-        } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
+        } else if (isDragging && e.touches.length === 1) {
             e.preventDefault();
             currentTranslateX = e.touches[0].clientX - dragStartX;
             currentTranslateY = e.touches[0].clientY - dragStartY;
