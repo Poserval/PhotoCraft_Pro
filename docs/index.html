@@ -61,7 +61,7 @@
             letter-spacing: 0.3px;
         }
 
-        /* Основной контент — flex контейнер */
+        /* Основной контент — занимает всё оставшееся место */
         .main-content {
             flex: 1;
             display: flex;
@@ -118,7 +118,7 @@
             flex-shrink: 0;
         }
 
-        /* Кнопки — всегда внизу */
+        /* Кнопки — фиксированный размер */
         .tools-row {
             display: flex;
             justify-content: center;
@@ -146,7 +146,6 @@
             background: #f3f4f6;
         }
 
-        /* Меню-оверлей */
         .menu-overlay {
             position: fixed;
             top: 0;
@@ -359,6 +358,19 @@
         menuFileInfo.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
         
         slogan.classList.add('hidden');
+        
+        // Небольшая задержка для корректного пересчета размеров
+        setTimeout(() => {
+            const img = previewImg;
+            const container = uploadZone;
+            if (img.naturalHeight > img.naturalWidth && img.naturalHeight > window.innerHeight * 0.6) {
+                // Для вертикальных фото (9:16 и подобных) ограничиваем высоту
+                const maxHeight = window.innerHeight - 250;
+                img.style.maxHeight = maxHeight + 'px';
+            } else {
+                img.style.maxHeight = '70vh';
+            }
+        }, 100);
     }
 
     function handleFile(file) {
