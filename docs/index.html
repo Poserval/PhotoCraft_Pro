@@ -28,7 +28,7 @@
             z-index: 10;
         }
         .logo {
-            height: 40px;
+            height: 120px;
             width: auto;
             object-fit: contain;
         }
@@ -40,10 +40,14 @@
             padding: 16px;
         }
 
-        /* Заголовок */
+        /* Заголовок — скрывается при загрузке фото */
         .title-section {
             text-align: center;
             margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+        .title-section.hidden {
+            display: none;
         }
         .main-title {
             font-size: 20px;
@@ -69,15 +73,20 @@
             padding: 20px 16px;
         }
 
-        /* Превью */
+        /* Превью — фиксированная область */
         .preview-area {
             background: #f3f4f6;
             border: 2px dashed #d1d5db;
             border-radius: 20px;
-            padding: 40px 20px;
+            padding: 0;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
         .preview-area:active {
             background: #e5e7eb;
@@ -85,12 +94,15 @@
         .preview-placeholder {
             color: #6b7280;
             font-size: 14px;
+            padding: 40px 20px;
         }
         .preview-image {
             max-width: 100%;
-            max-height: 300px;
+            max-height: 400px;
             object-fit: contain;
             border-radius: 12px;
+            display: block;
+            margin: 0 auto;
         }
         .file-info {
             margin-top: 12px;
@@ -99,7 +111,7 @@
             text-align: center;
         }
 
-        /* Панель инструментов (4 иконки) */
+        /* Панель инструментов (4 иконки) — всегда на месте */
         .tools-row {
             display: flex;
             justify-content: center;
@@ -209,26 +221,27 @@
 <body>
 
 <div class="header">
-    <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro" style="height: 120px; width: auto;">
+    <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro">
 </div>
 
 <div class="container">
-    <div class="title-section">
+    <!-- Заголовок — скрывается при загрузке -->
+    <div id="titleSection" class="title-section">
         <div class="main-title">Умное редактирование фото с AI</div>
         <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
     </div>
 
     <div class="card">
-        <!-- Область превью -->
+        <!-- Область превью — фиксированный размер -->
         <div id="uploadZone" class="preview-area">
-            <div class="preview-placeholder" id="previewPlaceholder">
-                📸 Нажмите для загрузки
+            <div id="previewPlaceholder" class="preview-placeholder">
+                📸 Нажмите для загрузки изображения
             </div>
             <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
 
-        <!-- 4 основные кнопки -->
+        <!-- 4 основные кнопки — всегда на месте -->
         <div class="tools-row">
             <div class="tool-icon" data-menu="edit">✏️</div>
             <div class="tool-icon" data-menu="remove-bg">✂️</div>
@@ -236,7 +249,7 @@
             <div class="tool-icon" data-menu="replace-bg">🖼️</div>
         </div>
 
-        <!-- Меню-панель (появляется при клике на иконку) -->
+        <!-- Меню-панель -->
         <div id="menuPanel" class="menu-panel">
             <div class="menu-header">
                 <button class="back-btn" id="backBtn">←</button>
@@ -263,6 +276,7 @@
     const previewImg = document.getElementById('previewImg');
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const fileInfoDiv = document.getElementById('fileInfo');
+    const titleSection = document.getElementById('titleSection');
     let currentImageFile = null;
 
     function handleFile(file) {
@@ -275,6 +289,9 @@
             fileInfoDiv.style.display = 'block';
             fileInfoDiv.innerText = `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type.split('/')[1].toUpperCase()}`;
             currentImageFile = file;
+            
+            // Скрываем заголовок при загрузке фото
+            titleSection.classList.add('hidden');
         };
         reader.readAsDataURL(file);
     }
@@ -293,7 +310,7 @@
     const menuPanel = document.getElementById('menuPanel');
     const menuTitleSpan = document.getElementById('menuTitle');
     const backBtn = document.getElementById('backBtn');
-    const sectionContent = document.getElementById('sectionContent');
+    const sectionContentDiv = document.getElementById('sectionContent');
     let activeMenu = null;
 
     const menuNames = {
@@ -308,22 +325,22 @@
             activeMenu = btn.dataset.menu;
             menuTitleSpan.innerText = menuNames[activeMenu] || 'Редактирование';
             menuPanel.classList.add('active');
-            sectionContent.innerHTML = ''; // очищаем старый контент
+            sectionContentDiv.innerHTML = '';
         });
     });
 
     backBtn.addEventListener('click', () => {
         menuPanel.classList.remove('active');
         activeMenu = null;
-        sectionContent.innerHTML = '';
+        sectionContentDiv.innerHTML = '';
     });
 
-    // Обработчики разделов (пока только кадрирование с ЖОПОЙ)
+    // Обработчики разделов
     document.querySelectorAll('.section-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const section = btn.dataset.section;
             if (section === 'crop') {
-                sectionContent.innerHTML = `
+                sectionContentDiv.innerHTML = `
                     <div class="section-content">
                         <div class="test-block">
                             🔴 ЖОПА — тест работает!<br>
@@ -332,7 +349,7 @@
                     </div>
                 `;
             } else {
-                sectionContent.innerHTML = `
+                sectionContentDiv.innerHTML = `
                     <div class="coming-soon">
                         🛠 Раздел "${btn.innerText}" в разработке
                     </div>
