@@ -15,7 +15,6 @@
             flex-direction: column;
         }
 
-        /* Основной контент */
         .main-content {
             flex: 1;
             display: flex;
@@ -80,7 +79,7 @@
         .save-btn { background: #3b82f6; color: white; }
         .panel-title { font-size: 18px; font-weight: 600; color: #1f2937; }
 
-        /* Выпадающие меню (аккордеон) */
+        /* Выпадающие меню */
         .accordion-item {
             border-bottom: 1px solid #e5e7eb;
         }
@@ -96,27 +95,20 @@
             font-weight: 500;
             color: #1f2937;
             cursor: pointer;
-            transition: background 0.2s;
         }
-        .accordion-header:active {
-            background: #f3f4f6;
-        }
+        .accordion-header:active { background: #f3f4f6; }
         .accordion-arrow {
             font-size: 18px;
             color: #9ca3af;
             transition: transform 0.2s;
         }
-        .accordion-arrow.open {
-            transform: rotate(180deg);
-        }
+        .accordion-arrow.open { transform: rotate(180deg); }
         .accordion-content {
             padding: 0 16px 16px 16px;
             background: #f9fafb;
             display: none;
         }
-        .accordion-content.open {
-            display: block;
-        }
+        .accordion-content.open { display: block; }
 
         /* Сетка форматов */
         .aspect-grid {
@@ -219,8 +211,8 @@
             </button>
             <div class="accordion-content" id="accordion-crop">
                 <div class="aspect-grid" id="aspectGrid">
-                    <button class="aspect-btn selected" data-aspect="free">✂️</button>
-                    <button class="aspect-btn" data-aspect="1:1">1:1</button>
+                    <button class="aspect-btn" data-aspect="free">✂️</button>
+                    <button class="aspect-btn selected" data-aspect="1:1">1:1</button>
                     <button class="aspect-btn" data-aspect="2:3">2:3</button>
                     <button class="aspect-btn" data-aspect="3:2">3:2</button>
                     <button class="aspect-btn" data-aspect="3:4">3:4</button>
@@ -234,7 +226,7 @@
             </div>
         </div>
 
-        <!-- Выпадающее меню: Коррекция -->
+        <!-- Остальные выпадающие меню (заглушки) -->
         <div class="accordion-item">
             <button class="accordion-header" data-accordion="correction">
                 <span>🎨 Коррекция</span>
@@ -244,8 +236,6 @@
                 <div class="tools-placeholder">🛠 Инструменты коррекции в разработке</div>
             </div>
         </div>
-
-        <!-- Выпадающее меню: Цвет -->
         <div class="accordion-item">
             <button class="accordion-header" data-accordion="color">
                 <span>🌈 Цвет</span>
@@ -255,8 +245,6 @@
                 <div class="tools-placeholder">🎨 Инструменты цвета в разработке</div>
             </div>
         </div>
-
-        <!-- Выпадающее меню: Эффекты -->
         <div class="accordion-item">
             <button class="accordion-header" data-accordion="effects">
                 <span>✨ Эффекты</span>
@@ -266,8 +254,6 @@
                 <div class="tools-placeholder">🎭 Эффекты и фильтры в разработке</div>
             </div>
         </div>
-
-        <!-- Выпадающее меню: Текст -->
         <div class="accordion-item">
             <button class="accordion-header" data-accordion="text">
                 <span>📝 Текст</span>
@@ -290,7 +276,7 @@
     const cropOverlay = document.getElementById('cropOverlay');
     const cropFrame = document.getElementById('cropFrame');
 
-    // === ЗАГРУЗКА ИЗОБРАЖЕНИЯ ИЗ localStorage ===
+    // === ЗАГРУЗКА ИЗОБРАЖЕНИЯ ===
     const savedImage = localStorage.getItem('currentImage');
     const savedName = localStorage.getItem('currentImageName');
     const savedSize = localStorage.getItem('currentImageSize');
@@ -401,10 +387,25 @@
         setTimeout(() => clampTranslate(), 50);
     }
 
-    // === РАМКА КАДРИРОВАНИЯ ===
+    // === РАМКА КАДРИРОВАНИЯ С ФИКСИРОВАННЫМИ ПРОПОРЦИЯМИ (1:1) ===
     let frameRect = { x: 50, y: 50, w: 200, h: 200 };
     let activeHandle = null;
     let startX, startY, startRect;
+    let currentAspect = '1:1';
+    let aspectRatio = 1; // 1:1
+
+    function getAspectRatio(aspect) {
+        switch(aspect) {
+            case '1:1': return 1;
+            case '2:3': return 2/3;
+            case '3:2': return 3/2;
+            case '3:4': return 3/4;
+            case '4:3': return 4/3;
+            case '9:16': return 9/16;
+            case '16:9': return 16/9;
+            default: return null; // свободный режим
+        }
+    }
 
     function updateFramePosition() {
         const rect = previewWrapper.getBoundingClientRect();
@@ -414,9 +415,38 @@
         cropFrame.style.height = frameRect.h + 'px';
     }
 
+    function resizeWithAspect(handle, newW, newH, startW, startH, startX, startY) {
+        let result = { w: newW, h: newH, x: startX, y: startY };
+        
+        if (aspectRatio !== null) {
+            // Фиксированные пропорции
+            if (handle.includes('e') || handle.includes('w')) {
+                result.h = newW / aspectRatio;
+            } else if (handle.includes('s') || handle.includes('n')) {
+                result.w = newH * aspectRatio;
+            }
+            
+            // Корректируем позицию при изменении размера с разных сторон
+            if (handle.includes('w')) {
+                result.x = startX + (startW - result.w);
+            }
+            if (handle.includes('n')) {
+                result.y = startY + (startH - result.h);
+            }
+        }
+        
+        return result;
+    }
+
     function initCrop() {
         const rect = previewWrapper.getBoundingClientRect();
-        frameRect = { x: rect.width * 0.1, y: rect.height * 0.1, w: rect.width * 0.8, h: rect.height * 0.8 };
+        const size = Math.min(rect.width, rect.height) * 0.8;
+        frameRect = { 
+            x: (rect.width - size) / 2, 
+            y: (rect.height - size) / 2, 
+            w: size, 
+            h: size 
+        };
         updateFramePosition();
         cropOverlay.style.display = 'block';
         cropFrame.style.display = 'block';
@@ -460,16 +490,38 @@
             newRect.x = Math.max(0, Math.min(startRect.x + dx, containerRect.width - startRect.w));
             newRect.y = Math.max(0, Math.min(startRect.y + dy, containerRect.height - startRect.h));
         } else {
-            if (activeHandle.includes('e')) newRect.w = Math.max(50, startRect.w + dx);
+            let newW = startRect.w;
+            let newH = startRect.h;
+            let newX = startRect.x;
+            let newY = startRect.y;
+            
+            if (activeHandle.includes('e')) newW = Math.max(50, startRect.w + dx);
             if (activeHandle.includes('w')) {
-                newRect.w = Math.max(50, startRect.w - dx);
-                newRect.x = startRect.x + (startRect.w - newRect.w);
+                newW = Math.max(50, startRect.w - dx);
+                newX = startRect.x + (startRect.w - newW);
             }
-            if (activeHandle.includes('s')) newRect.h = Math.max(50, startRect.h + dy);
+            if (activeHandle.includes('s')) newH = Math.max(50, startRect.h + dy);
             if (activeHandle.includes('n')) {
-                newRect.h = Math.max(50, startRect.h - dy);
-                newRect.y = startRect.y + (startRect.h - newRect.h);
+                newH = Math.max(50, startRect.h - dy);
+                newY = startRect.y + (startRect.h - newH);
             }
+            
+            // Применяем пропорции
+            if (aspectRatio !== null) {
+                if (activeHandle.includes('e') || activeHandle.includes('w')) {
+                    newH = newW / aspectRatio;
+                    if (activeHandle.includes('n')) {
+                        newY = startRect.y + (startRect.h - newH);
+                    }
+                } else {
+                    newW = newH * aspectRatio;
+                    if (activeHandle.includes('w')) {
+                        newX = startRect.x + (startRect.w - newW);
+                    }
+                }
+            }
+            
+            newRect = { w: newW, h: newH, x: newX, y: newY };
             newRect.x = Math.max(0, Math.min(newRect.x, containerRect.width - newRect.w));
             newRect.y = Math.max(0, Math.min(newRect.y, containerRect.height - newRect.h));
         }
@@ -479,7 +531,7 @@
 
     function endResize() { activeHandle = null; }
 
-    // === ВЫПАДАЮЩИЕ МЕНЮ (АККОРДЕОН) ===
+    // === ВЫПАДАЮЩИЕ МЕНЮ ===
     function initAccordion() {
         document.querySelectorAll('.accordion-header').forEach(header => {
             header.addEventListener('click', () => {
@@ -487,7 +539,6 @@
                 const content = document.getElementById(`accordion-${accordionId}`);
                 const arrow = header.querySelector('.accordion-arrow');
                 
-                // Закрываем все
                 document.querySelectorAll('.accordion-content').forEach(c => {
                     if (c !== content) c.classList.remove('open');
                 });
@@ -495,11 +546,9 @@
                     if (a !== arrow) a.classList.remove('open');
                 });
                 
-                // Открываем/закрываем текущий
                 content.classList.toggle('open');
                 arrow.classList.toggle('open');
                 
-                // Если открыли "Кадрирование" — активируем рамку
                 if (accordionId === 'crop' && content.classList.contains('open')) {
                     initCrop();
                 } else if (accordionId === 'crop' && !content.classList.contains('open')) {
@@ -509,21 +558,47 @@
         });
     }
 
-    // === ФОРМАТЫ (пока только визуально) ===
+    // === ФОРМАТЫ ===
     document.querySelectorAll('.aspect-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
+            
+            const aspect = btn.dataset.aspect;
+            currentAspect = aspect;
+            aspectRatio = getAspectRatio(aspect);
+            
+            if (aspectRatio !== null && cropOverlay.style.display === 'block') {
+                // Пересчитываем рамку с новыми пропорциями, сохраняя центр
+                const containerRect = previewWrapper.getBoundingClientRect();
+                const centerX = frameRect.x + frameRect.w / 2;
+                const centerY = frameRect.y + frameRect.h / 2;
+                
+                let newW, newH;
+                if (aspectRatio >= 1) {
+                    newW = frameRect.w;
+                    newH = newW / aspectRatio;
+                } else {
+                    newH = frameRect.h;
+                    newW = newH * aspectRatio;
+                }
+                
+                frameRect.w = Math.min(newW, containerRect.width - 20);
+                frameRect.h = Math.min(newH, containerRect.height - 20);
+                frameRect.x = Math.max(0, Math.min(centerX - frameRect.w/2, containerRect.width - frameRect.w));
+                frameRect.y = Math.max(0, Math.min(centerY - frameRect.h/2, containerRect.height - frameRect.h));
+                
+                updateFramePosition();
+            }
         });
     });
 
-    // === ОБРАБОТЧИКИ МАСШТАБИРОВАНИЯ ===
+    // === ОБРАБОТЧИКИ ===
     previewImg.addEventListener('touchstart', handleTouchStart);
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
 
-    // === ОБРАБОТЧИКИ РАМКИ ===
     document.querySelectorAll('.crop-handle').forEach(handle => {
         handle.addEventListener('touchstart', (e) => startResize(e, handle.classList[1]));
         handle.addEventListener('mousedown', (e) => startResize(e, handle.classList[1]));
@@ -535,9 +610,7 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === КНОПКИ НАВИГАЦИИ ===
     backBtn.addEventListener('click', () => {
-        // Сохраняем текущее изображение в localStorage перед выходом
         const currentImageSrc = previewImg.src;
         if (currentImageSrc && currentImageSrc !== savedImage) {
             localStorage.setItem('currentImage', currentImageSrc);
@@ -553,10 +626,8 @@
         window.location.href = '../index.html';
     });
 
-    // Инициализация
     previewImg.onload = () => {
         resetTransform();
-        // Рамка не активируется автоматически, только при открытии вкладки
     };
     
     initAccordion();
