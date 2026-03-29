@@ -16,7 +16,6 @@
             overflow: hidden;
         }
 
-        /* Основной контент - flex контейнер */
         .main-content {
             flex: 1;
             display: flex;
@@ -25,12 +24,10 @@
             overflow: hidden;
         }
 
-        /* Фиксированная верхняя часть */
         .fixed-top {
             flex-shrink: 0;
         }
 
-        /* Превью */
         .preview-wrapper {
             background: #f3f4f6;
             border: 2px dashed #d1d5db;
@@ -55,7 +52,6 @@
             text-align: center;
         }
 
-        /* Панель управления */
         .control-panel {
             margin-top: 16px;
             background: white;
@@ -92,14 +88,12 @@
         .save-btn { background: #3b82f6; color: white; }
         .panel-title { font-size: 18px; font-weight: 600; color: #1f2937; }
 
-        /* Прокручиваемая область с выпадающими меню */
         .scrollable-area {
             flex: 1;
             overflow-y: auto;
             padding: 0;
         }
 
-        /* Выпадающие меню */
         .accordion-item {
             border-bottom: 1px solid #e5e7eb;
         }
@@ -130,7 +124,6 @@
         }
         .accordion-content.open { display: block; }
 
-        /* Сетка форматов */
         .aspect-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -160,10 +153,7 @@
             font-size: 14px;
         }
 
-        /* Кадрирование - затемнение ТОЛЬКО вокруг рамки */
-        .crop-overlay {
-            display: none;
-        }
+        .crop-overlay { display: none; }
         .crop-frame {
             position: absolute;
             border: 2px solid white;
@@ -195,9 +185,7 @@
 <body>
 
 <div class="main-content">
-    <!-- Фиксированная верхняя часть -->
     <div class="fixed-top">
-        <!-- Превью -->
         <div class="preview-wrapper" id="previewWrapper">
             <img id="previewImg" class="preview-image" src="" alt="preview">
             <div id="cropOverlay" class="crop-overlay"></div>
@@ -210,17 +198,13 @@
         <div id="fileInfo" class="file-info"></div>
     </div>
 
-    <!-- Панель управления с прокруткой -->
     <div class="control-panel">
         <div class="panel-header">
             <button class="back-btn" id="backBtn">←</button>
             <span class="panel-title">Редактирование фото</span>
             <button class="save-btn" id="saveBtn">💾</button>
         </div>
-
-        <!-- Прокручиваемая область -->
         <div class="scrollable-area">
-            <!-- Выпадающее меню: Кадрирование -->
             <div class="accordion-item">
                 <button class="accordion-header" data-accordion="crop">
                     <span>✂️ Кадрирование</span>
@@ -242,8 +226,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Остальные выпадающие меню (заглушки) -->
             <div class="accordion-item">
                 <button class="accordion-header" data-accordion="correction">
                     <span>🎨 Коррекция</span>
@@ -285,7 +267,6 @@
 </div>
 
 <script>
-    // === ЭЛЕМЕНТЫ ===
     const previewWrapper = document.getElementById('previewWrapper');
     const previewImg = document.getElementById('previewImg');
     const fileInfoDiv = document.getElementById('fileInfo');
@@ -294,7 +275,6 @@
     const cropOverlay = document.getElementById('cropOverlay');
     const cropFrame = document.getElementById('cropFrame');
 
-    // === ЗАГРУЗКА ИЗОБРАЖЕНИЯ ===
     const savedImage = localStorage.getItem('currentImage');
     const savedName = localStorage.getItem('currentImageName');
     const savedSize = localStorage.getItem('currentImageSize');
@@ -307,7 +287,7 @@
         fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
 
-    // === МАСШТАБИРОВАНИЕ ПАЛЬЦАМИ ===
+    // === МАСШТАБИРОВАНИЕ ===
     let currentScale = 1;
     let currentTranslateX = 0;
     let currentTranslateY = 0;
@@ -405,7 +385,7 @@
         setTimeout(() => clampTranslate(), 50);
     }
 
-    // === РАМКА КАДРИРОВАНИЯ ===
+    // === РАМКА КАДРИРОВАНИЯ С ОГРАНИЧЕНИЕМ ===
     let frameRect = { x: 50, y: 50, w: 200, h: 200 };
     let activeHandle = null;
     let startX, startY, startRect;
@@ -480,8 +460,12 @@
         let newRect = { ...startRect };
         
         if (activeHandle === 'move') {
-            newRect.x = Math.max(0, Math.min(startRect.x + dx, containerRect.width - startRect.w));
-            newRect.y = Math.max(0, Math.min(startRect.y + dy, containerRect.height - startRect.h));
+            let newX = startRect.x + dx;
+            let newY = startRect.y + dy;
+            newX = Math.max(0, Math.min(newX, containerRect.width - startRect.w));
+            newY = Math.max(0, Math.min(newY, containerRect.height - startRect.h));
+            newRect.x = newX;
+            newRect.y = newY;
         } else {
             let newW = startRect.w;
             let newH = startRect.h;
@@ -513,17 +497,34 @@
                 }
             }
             
+            newW = Math.max(50, newW);
+            newH = Math.max(50, newH);
+            
+            if (newX < 0) {
+                newW = newW + newX;
+                newX = 0;
+            }
+            if (newY < 0) {
+                newH = newH + newY;
+                newY = 0;
+            }
+            if (newX + newW > containerRect.width) {
+                newW = containerRect.width - newX;
+            }
+            if (newY + newH > containerRect.height) {
+                newH = containerRect.height - newY;
+            }
+            
             newRect = { w: newW, h: newH, x: newX, y: newY };
-            newRect.x = Math.max(0, Math.min(newRect.x, containerRect.width - newRect.w));
-            newRect.y = Math.max(0, Math.min(newRect.y, containerRect.height - newRect.h));
         }
+        
         frameRect = newRect;
         updateFramePosition();
     }
 
     function endResize() { activeHandle = null; }
 
-    // === ВЫПАДАЮЩИЕ МЕНЮ ===
+    // === АККОРДЕОН ===
     function initAccordion() {
         document.querySelectorAll('.accordion-header').forEach(header => {
             header.addEventListener('click', () => {
@@ -601,14 +602,10 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ ПРИ ВОЗВРАТЕ ===
     function saveAndGoBack() {
         const currentImageSrc = previewImg.src;
         if (currentImageSrc && currentImageSrc !== savedImage) {
             localStorage.setItem('currentImage', currentImageSrc);
-            localStorage.setItem('currentImageName', savedName);
-            localStorage.setItem('currentImageSize', savedSize);
-            localStorage.setItem('currentImageFormat', savedFormat);
         }
         window.location.href = '../index.html';
     }
