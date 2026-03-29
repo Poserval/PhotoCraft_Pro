@@ -215,20 +215,21 @@
     });
     
     // Переход на страницу инструмента (только для кадрирования)
-    document.querySelectorAll('.tool-icon').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tool = btn.dataset.tool;
-            if (tool === 'crop') {
-                if (currentImageData) {
-                    window.location.href = `/PhotoCraft_Pro/docs/pages/${tool}.html`;
-                } else {
-                    alert('Сначала загрузите изображение');
-                }
+document.querySelectorAll('.tool-icon').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tool = btn.dataset.tool;
+        if (tool === 'crop') {
+            if (currentImageData) {
+                // ПРЯМАЯ ССЫЛКА НА ФАЙЛ
+                window.location.href = 'pages/crop.html';
             } else {
-                alert('Функция в разработке');
+                alert('Сначала загрузите изображение');
             }
-        });
+        } else {
+            alert('Функция в разработке');
+        }
     });
+});
 </script>
 </body>
 </html>
