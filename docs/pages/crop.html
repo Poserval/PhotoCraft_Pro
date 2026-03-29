@@ -153,6 +153,83 @@
             font-size: 14px;
         }
 
+        /* Модальное окно сохранения */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            width: 90%;
+            max-width: 320px;
+            margin: 20px;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        .format-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .format-btn {
+            flex: 1;
+            padding: 10px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 500;
+        }
+        .format-btn.selected {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-btn.cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .modal-btn.save {
+            background: #3b82f6;
+            color: white;
+        }
+
         .crop-overlay { display: none; }
         .crop-frame {
             position: absolute;
@@ -266,6 +343,24 @@
     </div>
 </div>
 
+<!-- Модальное окно сохранения -->
+<div id="saveModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title">💾 Сохранить изображение</div>
+        <input type="text" id="fileName" class="modal-input" placeholder="Имя файла" value="photo">
+        <div class="format-buttons" id="formatButtons">
+            <button class="format-btn" data-format="png">PNG</button>
+            <button class="format-btn selected" data-format="jpg">JPEG</button>
+            <button class="format-btn" data-format="webp">WEBP</button>
+            <button class="format-btn" data-format="bmp">BMP</button>
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn cancel" id="cancelSave">Отмена</button>
+            <button class="modal-btn save" id="confirmSave">Сохранить</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const previewWrapper = document.getElementById('previewWrapper');
     const previewImg = document.getElementById('previewImg');
@@ -274,6 +369,14 @@
     const saveBtn = document.getElementById('saveBtn');
     const cropOverlay = document.getElementById('cropOverlay');
     const cropFrame = document.getElementById('cropFrame');
+    const saveModal = document.getElementById('saveModal');
+    const fileNameInput = document.getElementById('fileName');
+    const formatButtons = document.querySelectorAll('.format-btn');
+    const cancelSave = document.getElementById('cancelSave');
+    const confirmSave = document.getElementById('confirmSave');
+    
+    let selectedFormat = 'jpg';
+    let currentImageData = null;
 
     const savedImage = localStorage.getItem('currentImage');
     const savedName = localStorage.getItem('currentImageName');
@@ -283,10 +386,108 @@
     if (savedImage) {
         previewImg.src = savedImage;
         fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
+        currentImageData = savedImage;
     } else {
         fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
 
+    // === ВЫБОР ФОРМАТА ===
+    formatButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            formatButtons.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedFormat = btn.dataset.format;
+        });
+    });
+
+    // === ФУНКЦИЯ ОБРЕЗКИ И СОХРАНЕНИЯ ===
+    function cropAndSave() {
+        const img = previewImg;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Получаем координаты рамки относительно контейнера
+        const containerRect = previewWrapper.getBoundingClientRect();
+        const imgRect = img.getBoundingClientRect();
+        
+        // Коэффициенты масштабирования
+        const scaleX = img.naturalWidth / imgRect.width;
+        const scaleY = img.naturalHeight / imgRect.height;
+        
+        // Координаты рамки в пикселях исходного изображения
+        let cropX = (frameRect.x - (imgRect.left - containerRect.left)) * scaleX;
+        let cropY = (frameRect.y - (imgRect.top - containerRect.top)) * scaleY;
+        let cropW = frameRect.w * scaleX;
+        let cropH = frameRect.h * scaleY;
+        
+        // Ограничиваем, чтобы не выходить за пределы
+        cropX = Math.max(0, cropX);
+        cropY = Math.max(0, cropY);
+        cropW = Math.min(cropW, img.naturalWidth - cropX);
+        cropH = Math.min(cropH, img.naturalHeight - cropY);
+        
+        canvas.width = cropW;
+        canvas.height = cropH;
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+        
+        // Конвертируем в выбранный формат
+        let mimeType = 'image/jpeg';
+        let fileExt = 'jpg';
+        switch(selectedFormat) {
+            case 'png':
+                mimeType = 'image/png';
+                fileExt = 'png';
+                break;
+            case 'webp':
+                mimeType = 'image/webp';
+                fileExt = 'webp';
+                break;
+            case 'bmp':
+                mimeType = 'image/bmp';
+                fileExt = 'bmp';
+                break;
+            default:
+                mimeType = 'image/jpeg';
+                fileExt = 'jpg';
+        }
+        
+        const fileName = fileNameInput.value || 'photo';
+        const croppedImage = canvas.toDataURL(mimeType, 0.92);
+        
+        // Создаем ссылку для скачивания
+        const link = document.createElement('a');
+        link.download = `${fileName}.${fileExt}`;
+        link.href = croppedImage;
+        link.click();
+        
+        // Сохраняем в localStorage для дальнейшего редактирования
+        localStorage.setItem('currentImage', croppedImage);
+        localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
+        localStorage.setItem('currentImageSize', canvas.width * canvas.height * 4);
+        localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
+        
+        closeModal();
+        
+        // Возвращаемся на главную после сохранения
+        setTimeout(() => {
+            window.location.href = '../index.html';
+        }, 500);
+    }
+
+    // === МОДАЛЬНОЕ ОКНО ===
+    function openModal() {
+        saveModal.style.display = 'flex';
+        const baseName = savedName ? savedName.split('.')[0] : 'photo';
+        fileNameInput.value = baseName;
+    }
+    
+    function closeModal() {
+        saveModal.style.display = 'none';
+    }
+    
+    cancelSave.addEventListener('click', closeModal);
+    confirmSave.addEventListener('click', cropAndSave);
+    
     // === МАСШТАБИРОВАНИЕ ===
     let currentScale = 1;
     let currentTranslateX = 0;
@@ -385,7 +586,7 @@
         setTimeout(() => clampTranslate(), 50);
     }
 
-    // === РАМКА КАДРИРОВАНИЯ С ОГРАНИЧЕНИЕМ ===
+    // === РАМКА КАДРИРОВАНИЯ ===
     let frameRect = { x: 50, y: 50, w: 200, h: 200 };
     let activeHandle = null;
     let startX, startY, startRect;
@@ -611,7 +812,7 @@
     }
 
     backBtn.addEventListener('click', saveAndGoBack);
-    saveBtn.addEventListener('click', saveAndGoBack);
+    saveBtn.addEventListener('click', openModal);
 
     previewImg.onload = () => {
         resetTransform();
