@@ -209,6 +209,12 @@
             object-fit: contain;
             display: block;
             margin: auto;
+            transform-origin: center center;
+            cursor: grab;
+            will-change: transform;
+        }
+        .menu-preview-img:active {
+            cursor: grabbing;
         }
         .menu-file-info {
             font-size: 10px;
@@ -420,6 +426,12 @@
     let currentImageData = null;
     let openSectionId = null;
     let selectedAspect = 'free';
+    let isMenuOpen = false;
+    
+    // Получаем текущее активное изображение
+    function getActiveImage() {
+        return isMenuOpen ? menuPreviewImg : previewImg;
+    }
     
     // Переменные для масштабирования и перемещения
     let currentScale = 1;
@@ -433,16 +445,19 @@
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
+    let activeElement = null;
     
-    // Получаем размеры изображения после масштабирования
-    function getScaledImageRect() {
-        const img = previewImg;
+    // Получаем контейнер для текущего изображения
+    function getActiveContainer() {
+        return isMenuOpen ? document.querySelector('.menu-preview') : previewArea;
+    }
+    
+    function getScaledImageRect(img, container) {
         if (!img.complete || img.naturalWidth === 0) return { width: 0, height: 0 };
         
         const naturalWidth = img.naturalWidth;
         const naturalHeight = img.naturalHeight;
         
-        const container = previewArea;
         const containerRect = container.getBoundingClientRect();
         
         const containerAspect = containerRect.width / containerRect.height;
@@ -463,44 +478,47 @@
         return { width: scaledWidth, height: scaledHeight };
     }
     
-    // Ограничение перемещения
-    function clampTranslate() {
-        const container = previewArea;
+    function clampTranslate(img, container) {
         const containerRect = container.getBoundingClientRect();
-        const { width: scaledWidth, height: scaledHeight } = getScaledImageRect();
+        const { width: scaledWidth, height: scaledHeight } = getScaledImageRect(img, container);
         
         let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
         let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
         
+        let newX = currentTranslateX;
+        let newY = currentTranslateY;
+        
         if (scaledWidth <= containerRect.width) {
-            currentTranslateX = 0;
+            newX = 0;
         } else {
-            currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
+            newX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
         }
         
         if (scaledHeight <= containerRect.height) {
-            currentTranslateY = 0;
+            newY = 0;
         } else {
-            currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
+            newY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
         }
         
-        applyTransform();
+        currentTranslateX = newX;
+        currentTranslateY = newY;
+        
+        applyTransform(img);
     }
     
-    function applyTransform() {
-        previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+    function applyTransform(img) {
+        img.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
     }
     
-    function resetTransform() {
+    function resetTransform(img) {
         currentScale = 1;
         currentTranslateX = 0;
         currentTranslateY = 0;
-        applyTransform();
+        applyTransform(img);
     }
     
-    // Масштабирование от центра
-    function zoomFromCenter(newScale) {
-        if (!previewImg.complete || previewImg.naturalWidth === 0) return;
+    function zoomFromCenter(newScale, img, container) {
+        if (!img.complete || img.naturalWidth === 0) return;
         
         const oldScale = currentScale;
         const newScaleClamped = Math.max(1, newScale);
@@ -513,8 +531,8 @@
         currentTranslateY = currentTranslateY * scaleRatio;
         currentScale = newScaleClamped;
         
-        applyTransform();
-        clampTranslate();
+        applyTransform(img);
+        clampTranslate(img, container);
     }
     
     function handleTouchStart(e) {
@@ -522,6 +540,9 @@
         
         e.stopPropagation();
         e.preventDefault();
+        
+        const img = getActiveImage();
+        const container = getActiveContainer();
         
         if (e.touches.length === 2) {
             const touch1 = e.touches[0];
@@ -532,11 +553,13 @@
             initialScale = currentScale;
             isZooming = true;
             isDragging = false;
+            activeElement = img;
         } else if (e.touches.length === 1) {
             if (currentScale > 1) {
                 isDragging = true;
                 dragStartX = e.touches[0].clientX - currentTranslateX;
                 dragStartY = e.touches[0].clientY - currentTranslateY;
+                activeElement = img;
             }
         }
     }
@@ -544,8 +567,13 @@
     function handleTouchMove(e) {
         if (!currentImageData) return;
         
+        if (!isZooming && !isDragging) return;
+        
         e.stopPropagation();
         e.preventDefault();
+        
+        const img = getActiveImage();
+        const container = getActiveContainer();
         
         if (isZooming && e.touches.length === 2) {
             const touch1 = e.touches[0];
@@ -555,11 +583,11 @@
             const newDistance = Math.hypot(dx, dy);
             const newScale = initialScale * (newDistance / initialDistance);
             
-            zoomFromCenter(newScale);
+            zoomFromCenter(newScale, img, container);
         } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
             currentTranslateX = e.touches[0].clientX - dragStartX;
             currentTranslateY = e.touches[0].clientY - dragStartY;
-            clampTranslate();
+            clampTranslate(img, container);
         }
     }
     
@@ -567,13 +595,20 @@
         e.stopPropagation();
         isZooming = false;
         isDragging = false;
+        activeElement = null;
         
         if (currentScale < 1) {
-            resetTransform();
+            const img = getActiveImage();
+            const container = getActiveContainer();
+            resetTransform(img);
         }
         
         setTimeout(() => {
-            clampTranslate();
+            const img = getActiveImage();
+            const container = getActiveContainer();
+            if (img && container) {
+                clampTranslate(img, container);
+            }
         }, 50);
     }
     
@@ -594,7 +629,8 @@
         
         slogan.classList.add('hidden');
         
-        resetTransform();
+        resetTransform(previewImg);
+        resetTransform(menuPreviewImg);
     }
     
     function handleFile(file) {
@@ -740,6 +776,15 @@
         
         menuOverlay.classList.add('active');
         header.classList.add('hide-header');
+        isMenuOpen = true;
+        
+        // Синхронизируем трансформацию с меню
+        setTimeout(() => {
+            const img = menuPreviewImg;
+            const container = document.querySelector('.menu-preview');
+            applyTransform(img);
+            clampTranslate(img, container);
+        }, 50);
         
         openSectionId = null;
         renderSections();
@@ -749,7 +794,16 @@
         menuOverlay.classList.remove('active');
         header.classList.remove('hide-header');
         activeMenu = null;
+        isMenuOpen = false;
         openSectionId = null;
+        
+        // Синхронизируем трансформацию обратно
+        setTimeout(() => {
+            const img = previewImg;
+            const container = previewArea;
+            applyTransform(img);
+            clampTranslate(img, container);
+        }, 50);
     }
     
     document.querySelectorAll('.tool-icon').forEach(btn => {
@@ -767,17 +821,30 @@
         alert('Функция сохранения в разработке');
     });
     
-    // Добавляем обработчики для масштабирования к previewImg
+    // Добавляем обработчики для обоих изображений
     previewImg.addEventListener('touchstart', handleTouchStart);
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
     
-    // Блокируем стандартный зум на previewArea
+    menuPreviewImg.addEventListener('touchstart', handleTouchStart);
+    menuPreviewImg.addEventListener('touchmove', handleTouchMove);
+    menuPreviewImg.addEventListener('touchend', handleTouchEnd);
+    
+    // Блокируем стандартный зум
     previewArea.addEventListener('touchstart', (e) => {
         if (e.target === previewArea && currentImageData) {
             e.preventDefault();
         }
     });
+    
+    const menuPreviewContainer = document.querySelector('.menu-preview');
+    if (menuPreviewContainer) {
+        menuPreviewContainer.addEventListener('touchstart', (e) => {
+            if (e.target === menuPreviewContainer && currentImageData) {
+                e.preventDefault();
+            }
+        });
+    }
 </script>
 
 </body>
