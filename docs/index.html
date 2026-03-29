@@ -14,9 +14,10 @@
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f9fafb;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .header {
@@ -61,16 +62,15 @@
             letter-spacing: 0.3px;
         }
 
-        /* Основной контент — занимает всё оставшееся место */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             padding: 16px;
             min-height: 0;
+            overflow-y: auto;
         }
 
-        /* Область ОПП — занимает всё доступное место */
         .preview-wrapper {
             flex: 1;
             display: flex;
@@ -118,7 +118,6 @@
             flex-shrink: 0;
         }
 
-        /* Кнопки — фиксированный размер */
         .tools-row {
             display: flex;
             justify-content: center;
@@ -279,7 +278,7 @@
     <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
 </div>
 
-<div class="main-content">
+<div class="main-content" id="mainContent">
     <div class="preview-wrapper">
         <div id="uploadZone" class="preview-area">
             <div id="previewPlaceholder" class="preview-placeholder">
@@ -335,12 +334,38 @@
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const fileInfoDiv = document.getElementById('fileInfo');
     const slogan = document.getElementById('slogan');
+    const mainContent = document.getElementById('mainContent');
     
     const menuPreviewImg = document.getElementById('menuPreviewImg');
     const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
     const menuFileInfo = document.getElementById('menuFileInfo');
     
     let currentImageData = null;
+
+    function fitImageToScreen() {
+        if (!previewImg.src || previewImg.style.display === 'none') return;
+        
+        // Получаем высоту фиксированных элементов
+        const headerHeight = document.querySelector('.header').offsetHeight;
+        const sloganHeight = slogan.classList.contains('hidden') ? 0 : slogan.offsetHeight;
+        const toolsHeight = document.querySelector('.tools-row').offsetHeight;
+        const fileInfoHeight = fileInfoDiv.style.display === 'block' ? fileInfoDiv.offsetHeight : 0;
+        const padding = 32; // отступы main-content
+        
+        // Доступная высота для изображения
+        const availableHeight = window.innerHeight - headerHeight - sloganHeight - toolsHeight - fileInfoHeight - padding;
+        
+        // Применяем ограничение
+        previewImg.style.maxHeight = availableHeight + 'px';
+        
+        // Если изображение всё ещё выходит за пределы, уменьшаем
+        if (previewImg.offsetHeight > availableHeight) {
+            previewImg.style.height = availableHeight + 'px';
+            previewImg.style.width = 'auto';
+        } else {
+            previewImg.style.height = 'auto';
+        }
+    }
 
     function updatePreview(dataUrl, name, size, format) {
         currentImageData = dataUrl;
@@ -359,18 +384,12 @@
         
         slogan.classList.add('hidden');
         
-        // Небольшая задержка для корректного пересчета размеров
-        setTimeout(() => {
-            const img = previewImg;
-            const container = uploadZone;
-            if (img.naturalHeight > img.naturalWidth && img.naturalHeight > window.innerHeight * 0.6) {
-                // Для вертикальных фото (9:16 и подобных) ограничиваем высоту
-                const maxHeight = window.innerHeight - 250;
-                img.style.maxHeight = maxHeight + 'px';
-            } else {
-                img.style.maxHeight = '70vh';
-            }
-        }, 100);
+        // Подгоняем после загрузки изображения
+        if (previewImg.complete) {
+            fitImageToScreen();
+        } else {
+            previewImg.onload = fitImageToScreen;
+        }
     }
 
     function handleFile(file) {
@@ -393,6 +412,9 @@
         };
         input.click();
     });
+
+    // Подгонка при изменении размера окна
+    window.addEventListener('resize', fitImageToScreen);
 
     const menuOverlay = document.getElementById('menuOverlay');
     const menuTitleSpan = document.getElementById('menuTitle');
