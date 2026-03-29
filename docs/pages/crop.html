@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>PhotoCraft Pro — Кадрирование</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,9 +33,6 @@
             height: 44px;
             font-size: 24px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .title { font-size: 18px; font-weight: 600; }
         .crop-container {
@@ -45,7 +42,6 @@
             overflow: hidden;
             aspect-ratio: 3 / 4;
             width: 100%;
-            touch-action: none;
         }
         .crop-container img {
             width: 100%;
@@ -72,41 +68,23 @@
             z-index: 20;
             display: none;
         }
-        .crop-frame:active { cursor: grabbing; }
         .handle {
             position: absolute;
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             background: white;
             border: 2px solid #3b82f6;
-            border-radius: 8px;
+            border-radius: 6px;
             pointer-events: auto;
         }
-        .handle.nw { top: -14px; left: -14px; cursor: nw-resize; }
-        .handle.n { top: -14px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .handle.ne { top: -14px; right: -14px; cursor: ne-resize; }
-        .handle.w { top: 50%; left: -14px; transform: translateY(-50%); cursor: w-resize; }
-        .handle.e { top: 50%; right: -14px; transform: translateY(-50%); cursor: e-resize; }
-        .handle.sw { bottom: -14px; left: -14px; cursor: sw-resize; }
-        .handle.s { bottom: -14px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .handle.se { bottom: -14px; right: -14px; cursor: se-resize; }
-        .zoom-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
-        }
-        .zoom-btn {
-            flex: 1;
-            padding: 12px;
-            background: #6b7280;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .zoom-btn:active { transform: scale(0.96); }
+        .handle.nw { top: -12px; left: -12px; cursor: nw-resize; }
+        .handle.n { top: -12px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .handle.ne { top: -12px; right: -12px; cursor: ne-resize; }
+        .handle.w { top: 50%; left: -12px; transform: translateY(-50%); cursor: w-resize; }
+        .handle.e { top: 50%; right: -12px; transform: translateY(-50%); cursor: e-resize; }
+        .handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
+        .handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
         .save-btn {
             margin-top: 16px;
             width: 100%;
@@ -140,14 +118,8 @@
         </div>
     </div>
     
-    <div class="zoom-controls">
-        <button class="zoom-btn" id="zoomInBtn">🔍 + Увеличить</button>
-        <button class="zoom-btn" id="zoomOutBtn">🔍 - Уменьшить</button>
-        <button class="zoom-btn" id="resetZoomBtn">⟳ Сброс</button>
-    </div>
-    
     <button class="save-btn" id="saveBtn">💾 Применить и вернуться</button>
-    <div class="info">👇 Потяните за уголки рамки | 🖐️ Перемещайте увеличенное фото</div>
+    <div class="info">👇 Потяните за уголки рамки</div>
 </div>
 
 <script>
@@ -157,9 +129,6 @@
     const frame = document.getElementById('frame');
     const backBtn = document.getElementById('backBtn');
     const saveBtn = document.getElementById('saveBtn');
-    const zoomInBtn = document.getElementById('zoomInBtn');
-    const zoomOutBtn = document.getElementById('zoomOutBtn');
-    const resetZoomBtn = document.getElementById('resetZoomBtn');
 
     // Загружаем изображение из localStorage
     const savedImage = localStorage.getItem('currentImage');
@@ -167,87 +136,12 @@
         image.src = savedImage;
     } else {
         image.src = '';
-        alert('Нет загруженного изображения. Вернитесь на главную и загрузите фото.');
+        alert('Нет загруженного изображения');
     }
 
-    let isCropActive = false;
     let frameRect = { x: 50, y: 50, w: 200, h: 200 };
     let activeHandle = null;
     let startX, startY, startRect;
-    
-    // Масштабирование
-    let currentScale = 1;
-    let currentTranslateX = 0;
-    let currentTranslateY = 0;
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    
-    function applyTransform() {
-        image.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
-    }
-    
-    function clampTranslate() {
-        const containerRect = container.getBoundingClientRect();
-        const imgRect = image.getBoundingClientRect();
-        const scaledWidth = imgRect.width;
-        const scaledHeight = imgRect.height;
-        
-        let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
-        let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
-        
-        if (scaledWidth <= containerRect.width) currentTranslateX = 0;
-        else currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
-        
-        if (scaledHeight <= containerRect.height) currentTranslateY = 0;
-        else currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
-        
-        applyTransform();
-    }
-    
-    function resetZoom() {
-        currentScale = 1;
-        currentTranslateX = 0;
-        currentTranslateY = 0;
-        applyTransform();
-    }
-    
-    function zoomIn() {
-        currentScale = Math.min(3, currentScale + 0.2);
-        applyTransform();
-        clampTranslate();
-    }
-    
-    function zoomOut() {
-        currentScale = Math.max(1, currentScale - 0.2);
-        if (currentScale === 1) {
-            currentTranslateX = 0;
-            currentTranslateY = 0;
-        }
-        applyTransform();
-        clampTranslate();
-    }
-    
-    function onTouchStart(e) {
-        if (currentScale > 1) {
-            isDragging = true;
-            dragStartX = e.touches[0].clientX - currentTranslateX;
-            dragStartY = e.touches[0].clientY - currentTranslateY;
-        }
-    }
-    
-    function onTouchMove(e) {
-        if (isDragging && currentScale > 1) {
-            e.preventDefault();
-            currentTranslateX = e.touches[0].clientX - dragStartX;
-            currentTranslateY = e.touches[0].clientY - dragStartY;
-            clampTranslate();
-        }
-    }
-    
-    function onTouchEnd() {
-        isDragging = false;
-    }
     
     function updateFramePosition() {
         const rect = container.getBoundingClientRect();
@@ -263,14 +157,6 @@
         updateFramePosition();
         overlay.style.display = 'block';
         frame.style.display = 'block';
-        isCropActive = true;
-    }
-    
-    function disableCrop() {
-        overlay.style.display = 'none';
-        frame.style.display = 'none';
-        isCropActive = false;
-        activeHandle = null;
     }
     
     function startResize(e, handle) {
@@ -324,19 +210,9 @@
     
     function endResize() { activeHandle = null; }
     
-    function saveAndGoBack() {
-        // Пока просто возвращаемся
-        window.location.href = '/PhotoCraft_Pro/docs/';
-    }
-    
     image.onload = () => {
-        resetZoom();
         initCrop();
     };
-    
-    image.addEventListener('touchstart', onTouchStart);
-    image.addEventListener('touchmove', onTouchMove);
-    image.addEventListener('touchend', onTouchEnd);
     
     document.querySelectorAll('.handle').forEach(handle => {
         handle.addEventListener('touchstart', (e) => startResize(e, handle.classList[1]));
@@ -349,11 +225,8 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
     
-    zoomInBtn.addEventListener('click', zoomIn);
-    zoomOutBtn.addEventListener('click', zoomOut);
-    resetZoomBtn.addEventListener('click', resetZoom);
-    backBtn.addEventListener('click', () => window.location.href = '/PhotoCraft_Pro/docs/');
-    saveBtn.addEventListener('click', saveAndGoBack);
+    backBtn.addEventListener('click', () => window.location.href = '../index.html');
+    saveBtn.addEventListener('click', () => window.location.href = '../index.html');
 </script>
 </body>
 </html>
