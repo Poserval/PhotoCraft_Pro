@@ -23,9 +23,13 @@
             border-bottom: 1px solid #e5e7eb;
             padding: 12px 16px;
             text-align: center;
+            transition: transform 0.3s ease;
             position: sticky;
             top: 0;
             z-index: 10;
+        }
+        .header.hide-header {
+            transform: translateY(-100%);
         }
         .logo {
             height: 120px;
@@ -71,6 +75,7 @@
             border-radius: 24px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             padding: 20px 16px;
+            transition: all 0.2s;
         }
 
         /* Превью — фиксированная область */
@@ -111,12 +116,16 @@
             text-align: center;
         }
 
-        /* Панель инструментов (4 иконки) — всегда на месте */
+        /* Панель инструментов (4 иконки) — скрывается при открытии меню */
         .tools-row {
             display: flex;
             justify-content: center;
             gap: 20px;
             margin-top: 24px;
+            transition: all 0.2s;
+        }
+        .tools-row.hide-tools {
+            display: none;
         }
         .tool-icon {
             width: 60px;
@@ -153,6 +162,11 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
+            position: sticky;
+            top: 0;
+            background: #f9fafb;
+            padding: 8px 0;
+            z-index: 5;
         }
         .back-btn {
             width: 44px;
@@ -171,6 +185,12 @@
             font-weight: 600;
             font-size: 18px;
             color: #1f2937;
+        }
+        
+        /* Список подменю с прокруткой */
+        .menu-sections-wrapper {
+            max-height: 50vh;
+            overflow-y: auto;
         }
         .menu-sections {
             display: flex;
@@ -216,22 +236,31 @@
             color: #6b7280;
             font-size: 13px;
         }
+        
+        /* Анимация для фиксации верха */
+        .fixed-top {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 20;
+            padding-top: 8px;
+        }
     </style>
 </head>
 <body>
 
-<div class="header">
+<div class="header" id="header">
     <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro">
 </div>
 
 <div class="container">
-    <!-- Заголовок — скрывается при загрузке -->
+    <!-- Заголовок — скрывается при загрузке фото -->
     <div id="titleSection" class="title-section">
         <div class="main-title">Умное редактирование фото с AI</div>
         <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card">
         <!-- Область превью — фиксированный размер -->
         <div id="uploadZone" class="preview-area">
             <div id="previewPlaceholder" class="preview-placeholder">
@@ -241,8 +270,8 @@
         </div>
         <div id="fileInfo" class="file-info" style="display: none;"></div>
 
-        <!-- 4 основные кнопки — всегда на месте -->
-        <div class="tools-row">
+        <!-- 4 основные кнопки — скрываются при открытии меню -->
+        <div id="toolsRow" class="tools-row">
             <div class="tool-icon" data-menu="edit">✏️</div>
             <div class="tool-icon" data-menu="remove-bg">✂️</div>
             <div class="tool-icon" data-menu="inpaint">🖌️</div>
@@ -256,14 +285,16 @@
                 <span class="menu-title" id="menuTitle">Редактирование фото</span>
                 <div style="width: 44px;"></div>
             </div>
-            <div id="menuSections" class="menu-sections">
-                <button class="section-btn" data-section="crop">Кадрирование</button>
-                <button class="section-btn" data-section="correction">Коррекция</button>
-                <button class="section-btn" data-section="color">Цвет</button>
-                <button class="section-btn" data-section="effects">Эффекты</button>
-                <button class="section-btn" data-section="text">Текст</button>
-                <button class="section-btn" data-section="tools">Инструменты</button>
-                <button class="section-btn" data-section="more">Дополнительно</button>
+            <div class="menu-sections-wrapper">
+                <div id="menuSections" class="menu-sections">
+                    <button class="section-btn" data-section="crop">Кадрирование</button>
+                    <button class="section-btn" data-section="correction">Коррекция</button>
+                    <button class="section-btn" data-section="color">Цвет</button>
+                    <button class="section-btn" data-section="effects">Эффекты</button>
+                    <button class="section-btn" data-section="text">Текст</button>
+                    <button class="section-btn" data-section="tools">Инструменты</button>
+                    <button class="section-btn" data-section="more">Дополнительно</button>
+                </div>
             </div>
             <div id="sectionContent"></div>
         </div>
@@ -311,6 +342,8 @@
     const menuTitleSpan = document.getElementById('menuTitle');
     const backBtn = document.getElementById('backBtn');
     const sectionContentDiv = document.getElementById('sectionContent');
+    const toolsRow = document.getElementById('toolsRow');
+    const header = document.getElementById('header');
     let activeMenu = null;
 
     const menuNames = {
@@ -320,19 +353,42 @@
         'replace-bg': 'Замена фона'
     };
 
+    function openMenu(menuId) {
+        activeMenu = menuId;
+        menuTitleSpan.innerText = menuNames[activeMenu] || 'Редактирование';
+        
+        // Скрываем хедер и кнопки
+        header.classList.add('hide-header');
+        toolsRow.classList.add('hide-tools');
+        
+        // Показываем меню
+        menuPanel.classList.add('active');
+        sectionContentDiv.innerHTML = '';
+        
+        // Прокручиваем к ОПП
+        const card = document.getElementById('card');
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeMenu() {
+        // Показываем хедер и кнопки
+        header.classList.remove('hide-header');
+        toolsRow.classList.remove('hide-tools');
+        
+        // Скрываем меню
+        menuPanel.classList.remove('active');
+        activeMenu = null;
+        sectionContentDiv.innerHTML = '';
+    }
+
     document.querySelectorAll('.tool-icon').forEach(btn => {
         btn.addEventListener('click', () => {
-            activeMenu = btn.dataset.menu;
-            menuTitleSpan.innerText = menuNames[activeMenu] || 'Редактирование';
-            menuPanel.classList.add('active');
-            sectionContentDiv.innerHTML = '';
+            openMenu(btn.dataset.menu);
         });
     });
 
     backBtn.addEventListener('click', () => {
-        menuPanel.classList.remove('active');
-        activeMenu = null;
-        sectionContentDiv.innerHTML = '';
+        closeMenu();
     });
 
     // Обработчики разделов
