@@ -14,7 +14,13 @@
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f9fafb;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Режим без меню — скролл всей страницы */
+        body.menu-open {
+            overflow: hidden;
         }
 
         /* Хедер */
@@ -37,11 +43,19 @@
             object-fit: contain;
         }
 
-        /* Контейнер */
+        /* Основной контент */
+        .main-content {
+            height: calc(100vh - 100px);
+            overflow-y: auto;
+            padding: 16px;
+        }
+        body.menu-open .main-content {
+            overflow-y: hidden;
+        }
+
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 16px;
         }
 
         /* Заголовок — скрывается при загрузке фото */
@@ -75,10 +89,9 @@
             border-radius: 24px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             padding: 20px 16px;
-            transition: all 0.2s;
         }
 
-        /* Превью — фиксированная область */
+        /* Превью */
         .preview-area {
             background: #f3f4f6;
             border: 2px dashed #d1d5db;
@@ -116,7 +129,7 @@
             text-align: center;
         }
 
-        /* Панель инструментов (4 иконки) — скрывается при открытии меню */
+        /* Панель инструментов */
         .tools-row {
             display: flex;
             justify-content: center;
@@ -146,27 +159,59 @@
             background: #f3f4f6;
         }
 
-        /* Меню-панель */
-        .menu-panel {
-            margin-top: 24px;
+        /* Меню-панель — фиксированный верх */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: #f9fafb;
-            border-radius: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        .menu-overlay.active {
+            transform: translateY(0);
+        }
+        
+        /* Фиксированная верхняя часть меню */
+        .menu-fixed-top {
+            background: #f9fafb;
             padding: 16px;
-            display: none;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
         }
-        .menu-panel.active {
+        
+        /* Превью в меню */
+        .menu-preview {
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .menu-preview-img {
+            max-width: 100%;
+            max-height: 150px;
+            object-fit: contain;
             display: block;
+            margin: 0 auto;
         }
+        .menu-file-info {
+            font-size: 10px;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 8px;
+        }
+        
         .menu-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            position: sticky;
-            top: 0;
-            background: #f9fafb;
-            padding: 8px 0;
-            z-index: 5;
+            margin-bottom: 12px;
         }
         .back-btn {
             width: 44px;
@@ -187,11 +232,13 @@
             color: #1f2937;
         }
         
-        /* Список подменю с прокруткой */
-        .menu-sections-wrapper {
-            max-height: 50vh;
+        /* Прокручиваемая область подменю */
+        .menu-scrollable {
+            flex: 1;
             overflow-y: auto;
+            padding: 0 16px 16px 16px;
         }
+        
         .menu-sections {
             display: flex;
             flex-direction: column;
@@ -236,15 +283,6 @@
             color: #6b7280;
             font-size: 13px;
         }
-        
-        /* Анимация для фиксации верха */
-        .fixed-top {
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 20;
-            padding-top: 8px;
-        }
     </style>
 </head>
 <body>
@@ -253,51 +291,62 @@
     <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro">
 </div>
 
-<div class="container">
-    <!-- Заголовок — скрывается при загрузке фото -->
-    <div id="titleSection" class="title-section">
-        <div class="main-title">Умное редактирование фото с AI</div>
-        <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
-    </div>
-
-    <div class="card" id="card">
-        <!-- Область превью — фиксированный размер -->
-        <div id="uploadZone" class="preview-area">
-            <div id="previewPlaceholder" class="preview-placeholder">
-                📸 Нажмите для загрузки изображения
-            </div>
-            <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
-        </div>
-        <div id="fileInfo" class="file-info" style="display: none;"></div>
-
-        <!-- 4 основные кнопки — скрываются при открытии меню -->
-        <div id="toolsRow" class="tools-row">
-            <div class="tool-icon" data-menu="edit">✏️</div>
-            <div class="tool-icon" data-menu="remove-bg">✂️</div>
-            <div class="tool-icon" data-menu="inpaint">🖌️</div>
-            <div class="tool-icon" data-menu="replace-bg">🖼️</div>
+<div class="main-content" id="mainContent">
+    <div class="container">
+        <div id="titleSection" class="title-section">
+            <div class="main-title">Умное редактирование фото с AI</div>
+            <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
         </div>
 
-        <!-- Меню-панель -->
-        <div id="menuPanel" class="menu-panel">
-            <div class="menu-header">
-                <button class="back-btn" id="backBtn">←</button>
-                <span class="menu-title" id="menuTitle">Редактирование фото</span>
-                <div style="width: 44px;"></div>
-            </div>
-            <div class="menu-sections-wrapper">
-                <div id="menuSections" class="menu-sections">
-                    <button class="section-btn" data-section="crop">Кадрирование</button>
-                    <button class="section-btn" data-section="correction">Коррекция</button>
-                    <button class="section-btn" data-section="color">Цвет</button>
-                    <button class="section-btn" data-section="effects">Эффекты</button>
-                    <button class="section-btn" data-section="text">Текст</button>
-                    <button class="section-btn" data-section="tools">Инструменты</button>
-                    <button class="section-btn" data-section="more">Дополнительно</button>
+        <div class="card">
+            <div id="uploadZone" class="preview-area">
+                <div id="previewPlaceholder" class="preview-placeholder">
+                    📸 Нажмите для загрузки изображения
                 </div>
+                <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
             </div>
-            <div id="sectionContent"></div>
+            <div id="fileInfo" class="file-info" style="display: none;"></div>
+
+            <div id="toolsRow" class="tools-row">
+                <div class="tool-icon" data-menu="edit">✏️</div>
+                <div class="tool-icon" data-menu="remove-bg">✂️</div>
+                <div class="tool-icon" data-menu="inpaint">🖌️</div>
+                <div class="tool-icon" data-menu="replace-bg">🖼️</div>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- Оверлей меню -->
+<div id="menuOverlay" class="menu-overlay">
+    <div class="menu-fixed-top">
+        <!-- Превью в меню -->
+        <div class="menu-preview">
+            <img id="menuPreviewImg" class="menu-preview-img" style="display: none;" alt="preview">
+            <div id="menuPreviewPlaceholder" class="preview-placeholder" style="padding: 20px;">
+                📸 Нет загруженного фото
+            </div>
+            <div id="menuFileInfo" class="menu-file-info" style="display: none;"></div>
+        </div>
+        
+        <div class="menu-header">
+            <button class="back-btn" id="backBtn">←</button>
+            <span class="menu-title" id="menuTitle">Редактирование фото</span>
+            <div style="width: 44px;"></div>
+        </div>
+    </div>
+    
+    <div class="menu-scrollable">
+        <div id="menuSections" class="menu-sections">
+            <button class="section-btn" data-section="crop">Кадрирование</button>
+            <button class="section-btn" data-section="correction">Коррекция</button>
+            <button class="section-btn" data-section="color">Цвет</button>
+            <button class="section-btn" data-section="effects">Эффекты</button>
+            <button class="section-btn" data-section="text">Текст</button>
+            <button class="section-btn" data-section="tools">Инструменты</button>
+            <button class="section-btn" data-section="more">Дополнительно</button>
+        </div>
+        <div id="sectionContent"></div>
     </div>
 </div>
 
@@ -308,21 +357,47 @@
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const fileInfoDiv = document.getElementById('fileInfo');
     const titleSection = document.getElementById('titleSection');
-    let currentImageFile = null;
+    
+    // Элементы в меню
+    const menuPreviewImg = document.getElementById('menuPreviewImg');
+    const menuPreviewPlaceholder = document.getElementById('menuPreviewPlaceholder');
+    const menuFileInfo = document.getElementById('menuFileInfo');
+    
+    let currentImageData = null;
+    let currentFileName = null;
+    let currentFileSize = null;
+    let currentFileFormat = null;
+
+    function updatePreview(dataUrl, name, size, format) {
+        currentImageData = dataUrl;
+        currentFileName = name;
+        currentFileSize = size;
+        currentFileFormat = format;
+        
+        // Обновляем основное превью
+        previewImg.src = dataUrl;
+        previewImg.style.display = 'block';
+        previewPlaceholder.style.display = 'none';
+        fileInfoDiv.style.display = 'block';
+        fileInfoDiv.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
+        
+        // Обновляем превью в меню
+        menuPreviewImg.src = dataUrl;
+        menuPreviewImg.style.display = 'block';
+        menuPreviewPlaceholder.style.display = 'none';
+        menuFileInfo.style.display = 'block';
+        menuFileInfo.innerText = `${name} • ${(size / 1024 / 1024).toFixed(2)} MB • ${format}`;
+        
+        titleSection.classList.add('hidden');
+    }
 
     function handleFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            previewImg.src = e.target.result;
-            previewImg.style.display = 'block';
-            previewPlaceholder.style.display = 'none';
-            fileInfoDiv.style.display = 'block';
-            fileInfoDiv.innerText = `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type.split('/')[1].toUpperCase()}`;
-            currentImageFile = file;
-            
-            // Скрываем заголовок при загрузке фото
-            titleSection.classList.add('hidden');
+            const dataUrl = e.target.result;
+            const format = file.type.split('/')[1].toUpperCase();
+            updatePreview(dataUrl, file.name, file.size, format);
         };
         reader.readAsDataURL(file);
     }
@@ -337,13 +412,14 @@
         input.click();
     });
 
-    // === Меню и подменю ===
-    const menuPanel = document.getElementById('menuPanel');
+    // === Меню ===
+    const menuOverlay = document.getElementById('menuOverlay');
     const menuTitleSpan = document.getElementById('menuTitle');
     const backBtn = document.getElementById('backBtn');
     const sectionContentDiv = document.getElementById('sectionContent');
-    const toolsRow = document.getElementById('toolsRow');
-    const header = document.getElementById('header');
+    const mainContent = document.getElementById('mainContent');
+    const body = document.body;
+    
     let activeMenu = null;
 
     const menuNames = {
@@ -357,26 +433,20 @@
         activeMenu = menuId;
         menuTitleSpan.innerText = menuNames[activeMenu] || 'Редактирование';
         
-        // Скрываем хедер и кнопки
-        header.classList.add('hide-header');
-        toolsRow.classList.add('hide-tools');
+        // Показываем оверлей меню
+        menuOverlay.classList.add('active');
+        body.classList.add('menu-open');
         
-        // Показываем меню
-        menuPanel.classList.add('active');
+        // Скрываем хедер
+        document.getElementById('header').classList.add('hide-header');
+        
         sectionContentDiv.innerHTML = '';
-        
-        // Прокручиваем к ОПП
-        const card = document.getElementById('card');
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function closeMenu() {
-        // Показываем хедер и кнопки
-        header.classList.remove('hide-header');
-        toolsRow.classList.remove('hide-tools');
-        
-        // Скрываем меню
-        menuPanel.classList.remove('active');
+        menuOverlay.classList.remove('active');
+        body.classList.remove('menu-open');
+        document.getElementById('header').classList.remove('hide-header');
         activeMenu = null;
         sectionContentDiv.innerHTML = '';
     }
