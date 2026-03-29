@@ -549,6 +549,12 @@
     }
 
     function openMenu(menuId) {
+        // Показываем меню только для кнопки "Редактирование"
+        if (menuId !== 'edit') {
+            alert('Функция в разработке. Доступно только редактирование фото.');
+            return;
+        }
+        
         activeMenu = menuId;
         menuTitleSpan.innerText = menuNames[activeMenu] || 'Редактирование';
         
