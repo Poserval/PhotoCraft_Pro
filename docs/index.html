@@ -17,7 +17,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            touch-action: pan-x pan-y; /* Разрешаем прокрутку страницы, но не зуминг */
+            touch-action: pan-x pan-y;
         }
 
         .header {
@@ -90,7 +90,7 @@
             width: 100%;
             overflow: hidden;
             position: relative;
-            touch-action: none; /* Отключаем стандартный зум браузера в области ОПП */
+            touch-action: none;
         }
         .preview-area:active {
             background: #e5e7eb;
@@ -520,11 +520,10 @@
     function handleTouchStart(e) {
         if (!currentImageData) return;
         
-        // Предотвращаем всплытие события, чтобы браузер не зумал страницу
         e.stopPropagation();
+        e.preventDefault();
         
         if (e.touches.length === 2) {
-            e.preventDefault();
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
             const dx = touch1.clientX - touch2.clientX;
@@ -534,7 +533,6 @@
             isZooming = true;
             isDragging = false;
         } else if (e.touches.length === 1) {
-            e.preventDefault();
             if (currentScale > 1) {
                 isDragging = true;
                 dragStartX = e.touches[0].clientX - currentTranslateX;
@@ -547,9 +545,9 @@
         if (!currentImageData) return;
         
         e.stopPropagation();
+        e.preventDefault();
         
         if (isZooming && e.touches.length === 2) {
-            e.preventDefault();
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
             const dx = touch1.clientX - touch2.clientX;
@@ -559,7 +557,6 @@
             
             zoomFromCenter(newScale);
         } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
-            e.preventDefault();
             currentTranslateX = e.touches[0].clientX - dragStartX;
             currentTranslateY = e.touches[0].clientY - dragStartY;
             clampTranslate();
@@ -775,7 +772,7 @@
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
     
-    // Также блокируем зум на previewArea
+    // Блокируем стандартный зум на previewArea
     previewArea.addEventListener('touchstart', (e) => {
         if (e.target === previewArea && currentImageData) {
             e.preventDefault();
