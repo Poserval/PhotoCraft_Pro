@@ -3,363 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>PhotoCraft Pro — Кадрирование</title>
+    <title>PhotoCraft Pro — Главная</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: system-ui, sans-serif;
-            background: #f3f4f6;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f9fafb;
             min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .back-btn {
-            background: #e5e7eb;
-            border: none;
-            border-radius: 16px;
-            width: 44px;
-            height: 44px;
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .title { font-size: 18px; font-weight: 600; }
-        .crop-container {
-            position: relative;
-            background: #1f2937;
-            border-radius: 16px;
-            overflow: hidden;
-            aspect-ratio: 3 / 4;
-            width: 100%;
-            touch-action: none;
-        }
-        .crop-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-        }
-        .crop-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            pointer-events: none;
-            z-index: 10;
-            display: none;
-        }
-        .crop-frame {
-            position: absolute;
-            border: 2px solid white;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-            cursor: grab;
-            z-index: 20;
-            display: none;
-        }
-        .crop-frame:active { cursor: grabbing; }
-        .handle {
-            position: absolute;
-            width: 28px;
-            height: 28px;
             background: white;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
-            pointer-events: auto;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: center;
         }
-        .handle.nw { top: -14px; left: -14px; cursor: nw-resize; }
-        .handle.n { top: -14px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .handle.ne { top: -14px; right: -14px; cursor: ne-resize; }
-        .handle.w { top: 50%; left: -14px; transform: translateY(-50%); cursor: w-resize; }
-        .handle.e { top: 50%; right: -14px; transform: translateY(-50%); cursor: e-resize; }
-        .handle.sw { bottom: -14px; left: -14px; cursor: sw-resize; }
-        .handle.s { bottom: -14px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .handle.se { bottom: -14px; right: -14px; cursor: se-resize; }
-        .zoom-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
+        .logo { height: 120px; width: auto; object-fit: contain; }
+        .slogan { text-align: center; padding: 16px 16px 0 16px; }
+        .slogan.hidden { display: none; }
+        .main-title {
+            font-size: 20px; font-weight: 800;
+            background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            white-space: nowrap;
         }
-        .zoom-btn {
-            flex: 1;
-            padding: 12px;
-            background: #6b7280;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
+        .formats-row { font-size: 10px; color: #9ca3af; margin-top: 6px; }
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 16px; }
+        .preview-wrapper { display: flex; flex-direction: column; flex: 1; position: relative; overflow: hidden; }
+        .preview-area {
+            background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 20px;
+            aspect-ratio: 3 / 4; width: 100%; position: relative; overflow: hidden; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
         }
-        .zoom-btn:active { transform: scale(0.96); }
-        .save-btn {
-            margin-top: 16px;
+        .preview-placeholder {
+            color: #6b7280; font-size: 14px; text-align: center;
             width: 100%;
-            padding: 14px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
         }
-        .info { margin-top: 12px; font-size: 11px; color: #6b7280; text-align: center; }
+        .preview-image {
+            width: 100%; height: 100%; object-fit: contain; display: block;
+        }
+        .file-info { margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center; }
+        .tools-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .tool-card {
+            background: white;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 16px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tool-card:active { transform: scale(0.96); background: #f3f4f6; }
+        .tool-icon { font-size: 40px; margin-bottom: 8px; }
+        .tool-title { font-size: 14px; font-weight: 500; color: #1f2937; }
+        .tool-desc { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <button class="back-btn" id="backBtn">←</button>
-        <span class="title">✂️ Кадрирование</span>
-        <div style="width: 44px;"></div>
+
+<div class="header">
+    <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro">
+</div>
+
+<div class="slogan" id="slogan">
+    <div class="main-title">Умное редактирование фото с AI</div>
+    <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
+</div>
+
+<div class="main-content">
+    <div class="preview-wrapper">
+        <div id="uploadZone" class="preview-area">
+            <div id="previewPlaceholder" class="preview-placeholder">📸 Нажмите для загрузки изображения</div>
+            <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
+        </div>
+        <div id="fileInfo" class="file-info" style="display: none;"></div>
     </div>
     
-    <div id="cropContainer" class="crop-container">
-        <img id="image" src="" alt="Изображение">
-        <div id="overlay" class="crop-overlay"></div>
-        <div id="frame" class="crop-frame">
-            <div class="handle nw"></div><div class="handle n"></div><div class="handle ne"></div>
-            <div class="handle w"></div><div class="handle e"></div>
-            <div class="handle sw"></div><div class="handle s"></div><div class="handle se"></div>
+    <div class="tools-row">
+        <div class="tool-card" data-tool="crop">
+            <div class="tool-icon">✂️</div>
+            <div class="tool-title">Кадрирование</div>
+            <div class="tool-desc">Обрезка фото</div>
+        </div>
+        <div class="tool-card disabled" data-tool="edit">
+            <div class="tool-icon">🎨</div>
+            <div class="tool-title">Редактирование</div>
+            <div class="tool-desc">Коррекция, цвет, эффекты</div>
+        </div>
+        <div class="tool-card disabled" data-tool="text">
+            <div class="tool-icon">📝</div>
+            <div class="tool-title">Текст</div>
+            <div class="tool-desc">Добавление текста</div>
+        </div>
+        <div class="tool-card disabled" data-tool="remove-bg">
+            <div class="tool-icon">✨</div>
+            <div class="tool-title">Удаление фона</div>
+            <div class="tool-desc">AI удаление фона</div>
+        </div>
+        <div class="tool-card disabled" data-tool="replace-bg">
+            <div class="tool-icon">🖼️</div>
+            <div class="tool-title">Замена фона</div>
+            <div class="tool-desc">Новый фон</div>
         </div>
     </div>
-    
-    <div class="zoom-controls">
-        <button class="zoom-btn" id="zoomInBtn">🔍 + Увеличить</button>
-        <button class="zoom-btn" id="zoomOutBtn">🔍 - Уменьшить</button>
-        <button class="zoom-btn" id="resetZoomBtn">⟳ Сброс</button>
-    </div>
-    
-    <button class="save-btn" id="saveBtn">💾 Применить и вернуться</button>
-    <div class="info">👇 Потяните за уголки рамки | 🖐️ Перемещайте увеличенное фото</div>
 </div>
 
 <script>
-    const container = document.getElementById('cropContainer');
-    const image = document.getElementById('image');
-    const overlay = document.getElementById('overlay');
-    const frame = document.getElementById('frame');
-    const backBtn = document.getElementById('backBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const zoomInBtn = document.getElementById('zoomInBtn');
-    const zoomOutBtn = document.getElementById('zoomOutBtn');
-    const resetZoomBtn = document.getElementById('resetZoomBtn');
-
-    // Загружаем изображение из localStorage
-    const savedImage = localStorage.getItem('currentImage');
-    if (savedImage) {
-        image.src = savedImage;
-    } else {
-        image.src = '';
-        alert('Нет загруженного изображения. Вернитесь на главную и загрузите фото.');
-    }
-
-    let isCropActive = false;
-    let frameRect = { x: 50, y: 50, w: 200, h: 200 };
-    let activeHandle = null;
-    let startX, startY, startRect;
+    const uploadZone = document.getElementById('uploadZone');
+    const previewImg = document.getElementById('previewImg');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const fileInfoDiv = document.getElementById('fileInfo');
+    const slogan = document.getElementById('slogan');
     
-    // Масштабирование
-    let currentScale = 1;
-    let currentTranslateX = 0;
-    let currentTranslateY = 0;
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
+    let currentImageData = null;
     
-    function applyTransform() {
-        image.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
-    }
-    
-    function clampTranslate() {
-        const containerRect = container.getBoundingClientRect();
-        const imgRect = image.getBoundingClientRect();
-        const scaledWidth = imgRect.width;
-        const scaledHeight = imgRect.height;
+    function updatePreview(dataUrl, name, size, format) {
+        currentImageData = dataUrl;
+        previewImg.src = dataUrl;
+        previewImg.style.display = 'block';
+        previewPlaceholder.style.display = 'none';
+        fileInfoDiv.style.display = 'block';
+        fileInfoDiv.innerText = `${name} • ${(size/1024/1024).toFixed(2)} MB • ${format}`;
+        slogan.classList.add('hidden');
         
-        let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
-        let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
-        
-        if (scaledWidth <= containerRect.width) currentTranslateX = 0;
-        else currentTranslateX = Math.max(-maxX, Math.min(maxX, currentTranslateX));
-        
-        if (scaledHeight <= containerRect.height) currentTranslateY = 0;
-        else currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
-        
-        applyTransform();
+        localStorage.setItem('currentImage', dataUrl);
+        localStorage.setItem('currentImageName', name);
+        localStorage.setItem('currentImageSize', size);
+        localStorage.setItem('currentImageFormat', format);
     }
     
-    function resetZoom() {
-        currentScale = 1;
-        currentTranslateX = 0;
-        currentTranslateY = 0;
-        applyTransform();
+    function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const format = file.type.split('/')[1].toUpperCase();
+            updatePreview(e.target.result, file.name, file.size, format);
+        };
+        reader.readAsDataURL(file);
     }
     
-    function zoomIn() {
-        currentScale = Math.min(3, currentScale + 0.2);
-        applyTransform();
-        clampTranslate();
-    }
-    
-    function zoomOut() {
-        currentScale = Math.max(1, currentScale - 0.2);
-        if (currentScale === 1) {
-            currentTranslateX = 0;
-            currentTranslateY = 0;
-        }
-        applyTransform();
-        clampTranslate();
-    }
-    
-    // Обработчики для перемещения
-    function onTouchStart(e) {
-        if (currentScale > 1) {
-            isDragging = true;
-            dragStartX = e.touches[0].clientX - currentTranslateX;
-            dragStartY = e.touches[0].clientY - currentTranslateY;
-        }
-    }
-    
-    function onTouchMove(e) {
-        if (isDragging && currentScale > 1) {
-            e.preventDefault();
-            currentTranslateX = e.touches[0].clientX - dragStartX;
-            currentTranslateY = e.touches[0].clientY - dragStartY;
-            clampTranslate();
-        }
-    }
-    
-    function onTouchEnd() {
-        isDragging = false;
-    }
-    
-    // Функции рамки
-    function updateFramePosition() {
-        const rect = container.getBoundingClientRect();
-        frame.style.left = frameRect.x + 'px';
-        frame.style.top = frameRect.y + 'px';
-        frame.style.width = frameRect.w + 'px';
-        frame.style.height = frameRect.h + 'px';
-    }
-    
-    function initCrop() {
-        const rect = container.getBoundingClientRect();
-        frameRect = { x: rect.width * 0.1, y: rect.height * 0.1, w: rect.width * 0.8, h: rect.height * 0.8 };
-        updateFramePosition();
-        overlay.style.display = 'block';
-        frame.style.display = 'block';
-        isCropActive = true;
-    }
-    
-    function disableCrop() {
-        overlay.style.display = 'none';
-        frame.style.display = 'none';
-        isCropActive = false;
-        activeHandle = null;
-    }
-    
-    function startResize(e, handle) {
-        e.preventDefault();
-        e.stopPropagation();
-        activeHandle = handle;
-        startX = e.touches ? e.touches[0].clientX : e.clientX;
-        startY = e.touches ? e.touches[0].clientY : e.clientY;
-        startRect = { ...frameRect };
-    }
-    
-    function startMove(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        activeHandle = 'move';
-        startX = e.touches ? e.touches[0].clientX : e.clientX;
-        startY = e.touches ? e.touches[0].clientY : e.clientY;
-        startRect = { ...frameRect };
-    }
-    
-    function onResizeMove(e) {
-        if (!activeHandle) return;
-        e.preventDefault();
-        const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-        const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-        const dx = currentX - startX;
-        const dy = currentY - startY;
-        const containerRect = container.getBoundingClientRect();
-        let newRect = { ...startRect };
-        
-        if (activeHandle === 'move') {
-            newRect.x = Math.max(0, Math.min(startRect.x + dx, containerRect.width - startRect.w));
-            newRect.y = Math.max(0, Math.min(startRect.y + dy, containerRect.height - startRect.h));
-        } else {
-            if (activeHandle.includes('e')) newRect.w = Math.max(50, startRect.w + dx);
-            if (activeHandle.includes('w')) {
-                newRect.w = Math.max(50, startRect.w - dx);
-                newRect.x = startRect.x + (startRect.w - newRect.w);
-            }
-            if (activeHandle.includes('s')) newRect.h = Math.max(50, startRect.h + dy);
-            if (activeHandle.includes('n')) {
-                newRect.h = Math.max(50, startRect.h - dy);
-                newRect.y = startRect.y + (startRect.h - newRect.h);
-            }
-            newRect.x = Math.max(0, Math.min(newRect.x, containerRect.width - newRect.w));
-            newRect.y = Math.max(0, Math.min(newRect.y, containerRect.height - newRect.h));
-        }
-        frameRect = newRect;
-        updateFramePosition();
-    }
-    
-    function endResize() { activeHandle = null; }
-    
-    // Сохранение и возврат
-    function saveAndGoBack() {
-        // Здесь будет логика обрезки изображения по рамке
-        // Пока просто возвращаемся
-        window.location.href = `/PhotoCraft_Pro/docs/pages/${tool}.html`;
-    }
-    
-    // Инициализация
-    image.onload = () => {
-        resetZoom();
-        initCrop();
-    };
-    
-    // Обработчики
-    image.addEventListener('touchstart', onTouchStart);
-    image.addEventListener('touchmove', onTouchMove);
-    image.addEventListener('touchend', onTouchEnd);
-    
-    document.querySelectorAll('.handle').forEach(handle => {
-        handle.addEventListener('touchstart', (e) => startResize(e, handle.classList[1]));
-        handle.addEventListener('mousedown', (e) => startResize(e, handle.classList[1]));
+    uploadZone.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => { if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]); };
+        input.click();
     });
-    frame.addEventListener('touchstart', startMove);
-    frame.addEventListener('mousedown', startMove);
-    window.addEventListener('touchmove', onResizeMove);
-    window.addEventListener('mousemove', onResizeMove);
-    window.addEventListener('touchend', endResize);
-    window.addEventListener('mouseup', endResize);
     
-    zoomInBtn.addEventListener('click', zoomIn);
-    zoomOutBtn.addEventListener('click', zoomOut);
-    resetZoomBtn.addEventListener('click', resetZoom);
-    backBtn.addEventListener('click', () => window.location.href = '/PhotoCraft_Pro/');
-    saveBtn.addEventListener('click', saveAndGoBack);
+    document.querySelectorAll('.tool-card:not(.disabled)').forEach(card => {
+        card.addEventListener('click', () => {
+            const tool = card.dataset.tool;
+            if (currentImageData) {
+                window.location.href = `/PhotoCraft_Pro/docs/pages/${tool}.html`;
+            } else {
+                alert('Сначала загрузите изображение');
+            }
+        });
+    });
 </script>
 </body>
 </html>
