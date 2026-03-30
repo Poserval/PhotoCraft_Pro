@@ -275,6 +275,12 @@
             70% { opacity: 1; }
             100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
         }
+        
+        @keyframes fadeOutCenter {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); visibility: hidden; }
+        }
     </style>
 </head>
 <body>
@@ -308,7 +314,6 @@
                     <span class="accordion-arrow">▼</span>
                 </button>
                 <div class="accordion-content" id="accordion-crop">
-                    <!-- Горизонтальный скролл для форматов -->
                     <div class="aspect-scroll-container">
                         <div class="aspect-grid" id="aspectGrid">
                             <button class="aspect-btn selected" data-aspect="free">
@@ -438,13 +443,37 @@
         fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
 
+    // === УВЕДОМЛЕНИЕ В ЦЕНТРЕ ===
+    function showCenterNotification(message) {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 2000;
+            text-align: center;
+            white-space: nowrap;
+            animation: fadeOutCenter 1.5s ease forwards;
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 1500);
+    }
+
     // === ОТКАТ ИЗОБРАЖЕНИЯ К ОРИГИНАЛУ ===
     function resetImageToOriginal() {
         if (originalImageData) {
             previewImg.src = originalImageData;
             currentImageData = originalImageData;
             resetTransform();
-            showNotification('↺ Изображение возвращено к оригиналу');
+            showCenterNotification('Правки отменены');
             if (savedName && savedSize && savedFormat) {
                 fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
             }
@@ -554,7 +583,7 @@
     let activeHandle = null;
     let startX, startY, startRect;
     let currentAspect = 'free';
-    let aspectRatio = null;  // null = свободный режим
+    let aspectRatio = null;
 
     function getAspectRatio(aspect) {
         switch(aspect) {
@@ -715,7 +744,7 @@
         });
     }
 
-    // === ФОРМАТЫ (горизонтальный скролл, по умолчанию свободный) ===
+    // === ФОРМАТЫ ===
     function initAspectButtons() {
         document.querySelectorAll('.aspect-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -746,8 +775,6 @@
                         frameRect.h = Math.min(newH, containerRect.height - 20);
                         frameRect.x = Math.max(0, Math.min(centerX - frameRect.w/2, containerRect.width - frameRect.w));
                         frameRect.y = Math.max(0, Math.min(centerY - frameRect.h/2, containerRect.height - frameRect.h));
-                    } else {
-                        // Свободный режим — рамка остаётся как есть
                     }
                     updateFramePosition();
                 }
@@ -777,27 +804,6 @@
     window.addEventListener('mouseup', endResize);
 
     // === СОХРАНЕНИЕ ===
-    function showNotification(message) {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #10b981;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 2000;
-            animation: fadeOut 2s ease forwards;
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 2000);
-    }
-    
     function openModal() {
         if (saveModal) {
             saveModal.style.display = 'flex';
@@ -870,7 +876,6 @@
         
         resetTransform();
         closeModal();
-        showNotification('✅ Изображение сохранено!');
         
         setTimeout(() => {
             if (cropFrame.style.display === 'block') {
