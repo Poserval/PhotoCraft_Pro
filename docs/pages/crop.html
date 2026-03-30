@@ -270,12 +270,6 @@
         .crop-edge.left { left: -3px; top: 50%; transform: translateY(-50%); width: 4px; height: 30px; cursor: w-resize; }
         .crop-edge.right { right: -3px; top: 50%; transform: translateY(-50%); width: 4px; height: 30px; cursor: e-resize; }
         
-        @keyframes fadeOut {
-            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            70% { opacity: 1; }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
-        }
-        
         @keyframes fadeOutCenter {
             0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
             70% { opacity: 1; }
@@ -443,7 +437,6 @@
         fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
 
-    // === УВЕДОМЛЕНИЕ В ЦЕНТРЕ ===
     function showCenterNotification(message) {
         const notification = document.createElement('div');
         notification.textContent = message;
@@ -467,7 +460,6 @@
         setTimeout(() => notification.remove(), 1500);
     }
 
-    // === ОТКАТ ИЗОБРАЖЕНИЯ К ОРИГИНАЛУ ===
     function resetImageToOriginal() {
         if (originalImageData) {
             previewImg.src = originalImageData;
@@ -624,7 +616,16 @@
         activeHandle = null;
     }
 
+    // Определяем, можно ли использовать грани (только в свободном режиме)
+    function canUseEdges() {
+        return aspectRatio === null; // null = свободный режим
+    }
+
     function startResize(e, handleType) {
+        // Если это грань (top, bottom, left, right) и режим не свободный — не реагируем
+        if (['top', 'bottom', 'left', 'right'].includes(handleType) && !canUseEdges()) {
+            return;
+        }
         e.preventDefault();
         e.stopPropagation();
         activeHandle = handleType;
@@ -682,7 +683,7 @@
                     if (activeHandle.includes('n')) {
                         newY = startRect.y + (startRect.h - newH);
                     }
-                } else {
+                } else if (activeHandle.includes('s') || activeHandle.includes('n')) {
                     newW = newH * aspectRatio;
                     if (activeHandle.includes('w')) {
                         newX = startRect.x + (startRect.w - newW);
