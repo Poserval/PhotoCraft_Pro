@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>PhotoCraft Pro — Редактирование фото</title>
     <style>
+        /* ... все стили остаются без изменений ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -24,9 +25,7 @@
             overflow: hidden;
         }
 
-        .fixed-top {
-            flex-shrink: 0;
-        }
+        .fixed-top { flex-shrink: 0; }
 
         .preview-wrapper {
             background: #f3f4f6;
@@ -87,9 +86,6 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
-        }
-        .back-btn:active, .reset-btn:active, .save-btn:active {
-            transform: scale(0.96);
         }
         .save-btn { background: #3b82f6; color: white; }
         .reset-btn { background: #ef4444; color: white; }
@@ -812,52 +808,20 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === ЗАПРОС РАЗРЕШЕНИЙ ===
+    // === ЗАПРОС РАЗРЕШЕНИЙ (через Filesystem) ===
     async function requestPermissions() {
-        if (!window.Capacitor || !window.Capacitor.isNative) {
-            console.log('Не Capacitor, разрешения не нужны');
-            return true;
-        }
-        
+        if (!window.Capacitor || !window.Capacitor.isNative) return true;
         try {
-            // Проверяем, есть ли плагин Permissions
-            if (!Capacitor.Permissions) {
-                console.warn('Permissions plugin not available');
-                return true;
-            }
-            
-            const permissions = [
-                'android.permission.READ_EXTERNAL_STORAGE',
-                'android.permission.WRITE_EXTERNAL_STORAGE'
-            ];
-            
-            const result = await Capacitor.Permissions.query({
-                permissions: permissions
+            // Пытаемся выполнить запись — если нет прав, Capacitor.Filesystem сам запросит их
+            const testFile = await Capacitor.Filesystem.writeFile({
+                path: 'test.txt',
+                data: 'test',
+                directory: Capacitor.Filesystem.Directory.Cache
             });
-            
-            console.log('Текущие разрешения:', result);
-            
-            const needToAsk = permissions.some(p => result[p] !== 'granted');
-            
-            if (needToAsk) {
-                const requestResult = await Capacitor.Permissions.request({
-                    permissions: permissions
-                });
-                
-                console.log('Результат запроса:', requestResult);
-                
-                const allGranted = permissions.every(p => requestResult[p] === 'granted');
-                
-                if (!allGranted) {
-                    showCenterNotification('❌ Нужны разрешения для сохранения');
-                    return false;
-                }
-            }
-            
             return true;
         } catch (error) {
-            console.error('Ошибка запроса разрешений:', error);
-            return true;
+            console.warn('Не удалось проверить права:', error);
+            return false;
         }
     }
 
