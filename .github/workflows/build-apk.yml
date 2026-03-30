@@ -18,23 +18,30 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli@5.7.8
-          
-      - name: Create Capacitor project
+      - name: Install Capacitor CLI and create project
         run: |
-          # Создаём временную папку для чистого проекта
-          mkdir -p temp-cap
-          cd temp-cap
+          # Устанавливаем Capacitor CLI
+          npm install -g @capacitor/cli@5.7.8
+          
+          # Создаём папку для Capacitor
+          mkdir -p capacitor-project
+          cd capacitor-project
+          
+          # Инициализируем npm проект
           npm init -y
+          
+          # Устанавливаем Capacitor core и android
           npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
+          
+          # Инициализируем Capacitor
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
           npx cap add android
           
-          # Копируем android проект в корень
+          # Копируем ВСЮ папку android (включая node_modules) в корень
           cp -r android ../
+          
           cd ..
-          rm -rf temp-cap
+          rm -rf capacitor-project
           
       - name: Copy our icons to Android project
         run: |
