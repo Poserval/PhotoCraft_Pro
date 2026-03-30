@@ -28,15 +28,19 @@ jobs:
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
           npx cap add android
           
-      - name: Copy app icons to Android project
+      - name: OVERWRITE Capacitor default icons with our icons
         run: |
+          # Удаляем стандартные иконки Capacitor
+          rm -rf android/app/src/main/res/mipmap-*
+          
+          # Создаём папки заново
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           
-          # Копируем иконки нужных размеров
+          # Копируем НАШИ иконки
           cp docs/assets/icon-app-48.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           cp docs/assets/icon-app-48.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           
@@ -52,20 +56,12 @@ jobs:
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
-      - name: Create adaptive icon
-        run: |
-          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          echo '<?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/ic_launcher_background"/>
-              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-          </adaptive-icon>' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          echo "✅ Наши иконки установлены"
           
-          mkdir -p android/app/src/main/res/values
-          echo '<?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="ic_launcher_background">#3b82f6</color>
-          </resources>' > android/app/src/main/res/values/ic_launcher_background.xml
+      - name: Verify icons were copied
+        run: |
+          echo "=== Проверка иконок ==="
+          ls -la android/app/src/main/res/mipmap-*/ic_launcher.png
           
       - name: Sync files
         run: npx cap sync android
