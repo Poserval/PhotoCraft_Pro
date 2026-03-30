@@ -417,6 +417,10 @@
 </div>
 
 <script>
+    // Проверка на Capacitor (APK)
+    const isNative = window.Capacitor && window.Capacitor.isNative;
+    console.log('Запущено в APK:', isNative);
+
     const previewWrapper = document.getElementById('previewWrapper');
     const previewImg = document.getElementById('previewImg');
     const fileInfoDiv = document.getElementById('fileInfo');
@@ -812,7 +816,32 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ ===
+    // === СОХРАНЕНИЕ (с поддержкой APK) ===
+    async function saveToDevice(dataUrl, fileName, fileExt) {
+        try {
+            const base64Data = dataUrl.split(',')[1];
+            
+            // Сохраняем во временный файл
+            const savedFile = await Capacitor.Filesystem.writeFile({
+                path: `${fileName}.${fileExt}`,
+                data: base64Data,
+                directory: Capacitor.Filesystem.Directory.Cache
+            });
+            
+            // Открываем диалог сохранения/шаринга
+            await Capacitor.Share.share({
+                title: 'Сохранить изображение',
+                text: `${fileName}.${fileExt}`,
+                url: savedFile.uri
+            });
+            
+            showCenterNotification('✅ Изображение готово к сохранению!');
+        } catch (error) {
+            console.error('Ошибка сохранения:', error);
+            showCenterNotification('❌ Ошибка сохранения');
+        }
+    }
+
     function openModal() {
         if (saveModal) {
             saveModal.style.display = 'flex';
@@ -862,10 +891,16 @@
         const fileName = fileNameInput ? fileNameInput.value : 'photo';
         const croppedImage = canvas.toDataURL(mimeType, 0.92);
         
-        const link = document.createElement('a');
-        link.download = `${fileName}.${fileExt}`;
-        link.href = croppedImage;
-        link.click();
+        // Сохраняем в зависимости от среды (APK или браузер)
+        if (isNative) {
+            saveToDevice(croppedImage, fileName, fileExt);
+        } else {
+            const link = document.createElement('a');
+            link.download = `${fileName}.${fileExt}`;
+            link.href = croppedImage;
+            link.click();
+            showCenterNotification('✅ Изображение сохранено!');
+        }
         
         previewImg.src = croppedImage;
         currentImageData = croppedImage;
