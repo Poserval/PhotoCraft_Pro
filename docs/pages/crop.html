@@ -257,6 +257,12 @@
         .crop-handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
         .crop-handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
         .crop-handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+        }
     </style>
 </head>
 <body>
@@ -376,17 +382,14 @@
     const confirmSave = document.getElementById('confirmSave');
     
     let selectedFormat = 'jpg';
-    let currentImageData = null;
-
-    const savedImage = localStorage.getItem('currentImage');
-    const savedName = localStorage.getItem('currentImageName');
-    const savedSize = localStorage.getItem('currentImageSize');
-    const savedFormat = localStorage.getItem('currentImageFormat');
+    let savedImage = localStorage.getItem('currentImage');
+    let savedName = localStorage.getItem('currentImageName');
+    let savedSize = localStorage.getItem('currentImageSize');
+    let savedFormat = localStorage.getItem('currentImageFormat');
 
     if (savedImage) {
         previewImg.src = savedImage;
         fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
-        currentImageData = savedImage;
     } else {
         fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
@@ -706,7 +709,28 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ ===
+    // === СОХРАНЕНИЕ (БЕЗ ВОЗВРАТА НА ГЛАВНУЮ) ===
+    function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 2000;
+            animation: fadeOut 2s ease forwards;
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 2000);
+    }
+    
     function openModal() {
         if (saveModal) {
             saveModal.style.display = 'flex';
@@ -769,21 +793,46 @@
         const fileName = fileNameInput ? fileNameInput.value : 'photo';
         const croppedImage = canvas.toDataURL(mimeType, 0.92);
         
+        // Скачиваем файл
         const link = document.createElement('a');
         link.download = `${fileName}.${fileExt}`;
         link.href = croppedImage;
         link.click();
         
+        // Обновляем изображение на странице
+        previewImg.src = croppedImage;
+        
+        // Обновляем информацию о файле
+        const newSize = canvas.width * canvas.height * 4;
+        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
+        
+        // Сохраняем в localStorage
         localStorage.setItem('currentImage', croppedImage);
         localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
-        localStorage.setItem('currentImageSize', canvas.width * canvas.height * 4);
+        localStorage.setItem('currentImageSize', newSize);
         localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
         
+        // Обновляем переменные
+        savedImage = croppedImage;
+        savedName = `${fileName}.${fileExt}`;
+        savedSize = newSize;
+        savedFormat = selectedFormat.toUpperCase();
+        
+        // Сбрасываем масштаб и позицию
+        resetTransform();
+        
+        // Закрываем модальное окно
         closeModal();
         
+        // Показываем уведомление
+        showNotification('✅ Изображение сохранено!');
+        
+        // Обновляем рамку для нового изображения
         setTimeout(() => {
-            window.location.href = '../index.html';
-        }, 500);
+            if (cropFrame.style.display === 'block') {
+                initCrop();
+            }
+        }, 100);
     }
     
     // Настройка обработчиков сохранения
