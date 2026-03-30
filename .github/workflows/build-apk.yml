@@ -18,17 +18,25 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Install Capacitor
-        run: |
-          npm install -g @capacitor/cli@5.7.8
-          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli@5.7.8
           
-      - name: Init Capacitor
+      - name: Create Capacitor project
         run: |
-          npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
+          # Создаём временную папку для чистого проекта
+          mkdir -p temp-cap
+          cd temp-cap
+          npm init -y
+          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
+          npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
           npx cap add android
           
-      - name: OVERWRITE Capacitor default icons with our icons
+          # Копируем android проект в корень
+          cp -r android ../
+          cd ..
+          rm -rf temp-cap
+          
+      - name: Copy our icons to Android project
         run: |
           rm -rf android/app/src/main/res/mipmap-*
           
@@ -53,9 +61,7 @@ jobs:
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
-          echo "✅ Наши иконки установлены"
-          
-      - name: Sync files
+      - name: Sync Capacitor
         run: npx cap sync android
           
       - name: Setup Java
