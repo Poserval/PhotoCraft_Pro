@@ -18,11 +18,7 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Install Capacitor
-        run: |
-          npm install -g @capacitor/cli@5.7.8
-          
-      - name: Create Capacitor project
+      - name: Create Capacitor project with all files
         run: |
           # Создаём временную папку
           mkdir temp
@@ -32,14 +28,17 @@ jobs:
           npm init -y
           
           # Устанавливаем Capacitor
-          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
+          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8 @capacitor/cli@5.7.8
           
           # Инициализируем Capacitor
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
           npx cap add android
           
-          # Копируем android папку обратно
-          cp -r android ../
+          # Копируем ВСЮ папку android (включая node_modules) обратно в корень
+          cp -r android ../android
+          cp -r node_modules ../node_modules
+          cp package.json ../package.json
+          cp package-lock.json ../package-lock.json 2>/dev/null || true
           
           cd ..
           rm -rf temp
