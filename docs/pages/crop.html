@@ -158,7 +158,6 @@
             font-size: 14px;
         }
 
-        /* Модальное окно сохранения */
         .modal {
             display: none;
             position: fixed;
@@ -226,18 +225,10 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .modal-btn.cancel {
-            background: #e5e7eb;
-            color: #374151;
-        }
-        .modal-btn.save {
-            background: #3b82f6;
-            color: white;
-        }
+        .modal-btn.cancel { background: #e5e7eb; color: #374151; }
+        .modal-btn.save { background: #3b82f6; color: white; }
 
         .crop-overlay { display: none; }
-        
-        /* Рамка с тонкими маркерами */
         .crop-frame {
             position: absolute;
             border: 2px solid white;
@@ -247,8 +238,6 @@
             display: none;
         }
         .crop-frame:active { cursor: grabbing; }
-        
-        /* Угловые маркеры (уголки) */
         .crop-corner {
             position: absolute;
             width: 16px;
@@ -256,73 +245,19 @@
             border: 2px solid white;
             pointer-events: auto;
         }
-        .crop-corner.nw {
-            top: -2px;
-            left: -2px;
-            border-right: none;
-            border-bottom: none;
-            cursor: nw-resize;
-        }
-        .crop-corner.ne {
-            top: -2px;
-            right: -2px;
-            border-left: none;
-            border-bottom: none;
-            cursor: ne-resize;
-        }
-        .crop-corner.sw {
-            bottom: -2px;
-            left: -2px;
-            border-right: none;
-            border-top: none;
-            cursor: sw-resize;
-        }
-        .crop-corner.se {
-            bottom: -2px;
-            right: -2px;
-            border-left: none;
-            border-top: none;
-            cursor: se-resize;
-        }
-        
-        /* Центральные маркеры (линии) */
+        .crop-corner.nw { top: -2px; left: -2px; border-right: none; border-bottom: none; cursor: nw-resize; }
+        .crop-corner.ne { top: -2px; right: -2px; border-left: none; border-bottom: none; cursor: ne-resize; }
+        .crop-corner.sw { bottom: -2px; left: -2px; border-right: none; border-top: none; cursor: sw-resize; }
+        .crop-corner.se { bottom: -2px; right: -2px; border-left: none; border-top: none; cursor: se-resize; }
         .crop-edge {
             position: absolute;
             background: white;
             pointer-events: auto;
         }
-        .crop-edge.top {
-            top: -3px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 4px;
-            cursor: n-resize;
-        }
-        .crop-edge.bottom {
-            bottom: -3px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 4px;
-            cursor: s-resize;
-        }
-        .crop-edge.left {
-            left: -3px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 30px;
-            cursor: w-resize;
-        }
-        .crop-edge.right {
-            right: -3px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 30px;
-            cursor: e-resize;
-        }
+        .crop-edge.top { top: -3px; left: 50%; transform: translateX(-50%); width: 30px; height: 4px; cursor: n-resize; }
+        .crop-edge.bottom { bottom: -3px; left: 50%; transform: translateX(-50%); width: 30px; height: 4px; cursor: s-resize; }
+        .crop-edge.left { left: -3px; top: 50%; transform: translateY(-50%); width: 4px; height: 30px; cursor: w-resize; }
+        .crop-edge.right { right: -3px; top: 50%; transform: translateY(-50%); width: 4px; height: 30px; cursor: e-resize; }
         
         @keyframes fadeOut {
             0% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -338,14 +273,10 @@
         <img id="previewImg" class="preview-image" src="" alt="preview">
         <div id="cropOverlay" class="crop-overlay"></div>
         <div id="cropFrame" class="crop-frame">
-            <div class="crop-corner nw"></div>
-            <div class="crop-corner ne"></div>
-            <div class="crop-corner sw"></div>
-            <div class="crop-corner se"></div>
-            <div class="crop-edge top"></div>
-            <div class="crop-edge bottom"></div>
-            <div class="crop-edge left"></div>
-            <div class="crop-edge right"></div>
+            <div class="crop-corner nw"></div><div class="crop-corner ne"></div>
+            <div class="crop-corner sw"></div><div class="crop-corner se"></div>
+            <div class="crop-edge top"></div><div class="crop-edge bottom"></div>
+            <div class="crop-edge left"></div><div class="crop-edge right"></div>
         </div>
     </div>
     <div id="fileInfo" class="file-info"></div>
@@ -355,7 +286,7 @@
             <button class="back-btn" id="backBtn">←</button>
             <span class="panel-title">Редактирование фото</span>
             <div style="display: flex; gap: 8px;">
-                <button class="reset-btn" id="resetBtn" title="Отменить изменения">↺</button>
+                <button class="reset-btn" id="resetBtn" title="Отменить изменения изображения">↺</button>
                 <button class="save-btn" id="saveBtn">💾</button>
             </div>
         </div>
@@ -453,7 +384,8 @@
     const confirmSave = document.getElementById('confirmSave');
     
     let selectedFormat = 'jpg';
-    let originalImageData = null;
+    let originalImageData = null;      // Оригинал изображения (для отката)
+    let currentImageData = null;        // Текущее изображение
     let savedImage = localStorage.getItem('currentImage');
     let savedName = localStorage.getItem('currentImageName');
     let savedSize = localStorage.getItem('currentImageSize');
@@ -462,24 +394,26 @@
     if (savedImage) {
         previewImg.src = savedImage;
         originalImageData = savedImage;
+        currentImageData = savedImage;
         fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
     } else {
         fileInfoDiv.innerText = 'Нет загруженного изображения';
     }
 
-    function resetToOriginal() {
+    // === ОТКАТ ИЗОБРАЖЕНИЯ К ОРИГИНАЛУ (без сброса рамки) ===
+    function resetImageToOriginal() {
         if (originalImageData) {
             previewImg.src = originalImageData;
-            resetTransform();
-            showNotification('↺ Изменения отменены');
+            currentImageData = originalImageData;
+            resetTransform();  // Сбрасываем масштаб и позицию
+            showNotification('↺ Изображение возвращено к оригиналу');
+            
+            // Обновляем информацию о файле
             if (savedName && savedSize && savedFormat) {
                 fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
             }
-            setTimeout(() => {
-                if (cropFrame.style.display === 'block') {
-                    initCrop();
-                }
-            }, 100);
+            
+            // Рамка НЕ сбрасывается, остаётся в текущем положении
         }
     }
 
@@ -834,9 +768,7 @@
     }
     
     function closeModal() {
-        if (saveModal) {
-            saveModal.style.display = 'none';
-        }
+        if (saveModal) saveModal.style.display = 'none';
     }
     
     function cropAndSave() {
@@ -882,6 +814,8 @@
         link.click();
         
         previewImg.src = croppedImage;
+        currentImageData = croppedImage;
+        
         const newSize = canvas.width * canvas.height * 4;
         fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
         
@@ -894,7 +828,6 @@
         savedName = `${fileName}.${fileExt}`;
         savedSize = newSize;
         savedFormat = selectedFormat.toUpperCase();
-        originalImageData = croppedImage;
         
         resetTransform();
         closeModal();
@@ -908,7 +841,7 @@
     }
     
     if (saveBtn) saveBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
-    if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetToOriginal(); });
+    if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetImageToOriginal(); });
     if (cancelSave) cancelSave.addEventListener('click', closeModal);
     if (confirmSave) confirmSave.addEventListener('click', cropAndSave);
     if (formatButtons) formatButtons.forEach(btn => {
@@ -923,6 +856,7 @@
     previewImg.onload = () => {
         resetTransform();
         if (!originalImageData) originalImageData = previewImg.src;
+        if (!currentImageData) currentImageData = previewImg.src;
     };
     
     initAccordion();
