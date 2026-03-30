@@ -807,37 +807,19 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ ДЛЯ ANDROID 15 (через MediaStore) ===
-    async function saveImageToGallery(base64Data, fileName, fileExt) {
+    // === СОХРАНЕНИЕ В DOWNLOADS ===
+    async function saveImageToDownloads(base64Data, fileName, fileExt) {
         try {
-            // Определяем MIME тип
-            let mimeType = 'image/jpeg';
-            switch(fileExt) {
-                case 'png': mimeType = 'image/png'; break;
-                case 'webp': mimeType = 'image/webp'; break;
-                case 'bmp': mimeType = 'image/bmp'; break;
-                default: mimeType = 'image/jpeg';
-            }
-            
-            // Для Android 10+ используем MediaStore через Intent
-            // Сначала сохраняем во временный файл, затем открываем системное "Поделиться"
-            const savedFile = await Capacitor.Filesystem.writeFile({
+            // Сохраняем в папку Documents (доступна на Android)
+            const result = await Capacitor.Filesystem.writeFile({
                 path: `${fileName}.${fileExt}`,
                 data: base64Data,
-                directory: Capacitor.Filesystem.Directory.Cache
+                directory: Capacitor.Filesystem.Directory.Documents,
+                recursive: true
             });
             
-            console.log('Файл сохранён во временную папку:', savedFile.uri);
-            
-            // Используем Share, чтобы открыть диалог сохранения
-            await Capacitor.Share.share({
-                title: 'Сохранить изображение',
-                text: `${fileName}.${fileExt}`,
-                url: savedFile.uri,
-                dialogTitle: 'Сохранить в галерею'
-            });
-            
-            showCenterNotification('✅ Выберите "Сохранить изображение"');
+            console.log('Файл сохранён:', result.uri);
+            showCenterNotification(`✅ Сохранено: ${fileName}.${fileExt}`);
             return true;
         } catch (error) {
             console.error('Ошибка сохранения:', error);
@@ -883,13 +865,13 @@
         canvas.height = cropH;
         ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
         
-        let mimeType = 'image/jpeg';
         let fileExt = 'jpg';
+        let mimeType = 'image/jpeg';
         switch(selectedFormat) {
-            case 'png': mimeType = 'image/png'; fileExt = 'png'; break;
-            case 'webp': mimeType = 'image/webp'; fileExt = 'webp'; break;
-            case 'bmp': mimeType = 'image/bmp'; fileExt = 'bmp'; break;
-            default: mimeType = 'image/jpeg'; fileExt = 'jpg';
+            case 'png': fileExt = 'png'; mimeType = 'image/png'; break;
+            case 'webp': fileExt = 'webp'; mimeType = 'image/webp'; break;
+            case 'bmp': fileExt = 'bmp'; mimeType = 'image/bmp'; break;
+            default: fileExt = 'jpg'; mimeType = 'image/jpeg';
         }
         
         const fileName = fileNameInput ? fileNameInput.value : 'photo';
@@ -900,7 +882,8 @@
         const isNative = window.Capacitor && window.Capacitor.isNative;
         
         if (isNative) {
-            await saveImageToGallery(base64Data, fileName, fileExt);
+            showCenterNotification('💾 Сохранение...');
+            await saveImageToDownloads(base64Data, fileName, fileExt);
         } else {
             const link = document.createElement('a');
             link.download = `${fileName}.${fileExt}`;
