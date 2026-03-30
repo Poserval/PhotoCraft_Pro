@@ -60,22 +60,34 @@
             padding: 12px 16px;
             background: #f9fafb;
             border-bottom: 1px solid #e5e7eb;
+            gap: 12px;
         }
-        .back-btn, .save-btn {
+        .back-btn, .reset-btn, .save-btn {
             width: 44px;
             height: 44px;
             background: #e5e7eb;
             border: none;
             border-radius: 16px;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s;
+        }
+        .back-btn:active, .reset-btn:active, .save-btn:active {
+            transform: scale(0.96);
         }
         .save-btn { background: #3b82f6; color: white; }
-        .panel-title { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .reset-btn { background: #ef4444; color: white; }
+        .panel-title { 
+            font-size: 18px; 
+            font-weight: 600; 
+            color: #1f2937;
+            flex: 1;
+            text-align: center;
+        }
 
         .scrollable-area {
             max-height: 50vh;
@@ -271,7 +283,10 @@
         <div class="panel-header">
             <button class="back-btn" id="backBtn">←</button>
             <span class="panel-title">Редактирование фото</span>
-            <button class="save-btn" id="saveBtn">💾</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="reset-btn" id="resetBtn" title="Отменить изменения">↺</button>
+                <button class="save-btn" id="saveBtn">💾</button>
+            </div>
         </div>
         <div class="scrollable-area">
             <div class="accordion-item">
@@ -358,6 +373,7 @@
     const previewImg = document.getElementById('previewImg');
     const fileInfoDiv = document.getElementById('fileInfo');
     const backBtn = document.getElementById('backBtn');
+    const resetBtn = document.getElementById('resetBtn');
     const saveBtn = document.getElementById('saveBtn');
     const cropOverlay = document.getElementById('cropOverlay');
     const cropFrame = document.getElementById('cropFrame');
@@ -368,6 +384,7 @@
     const confirmSave = document.getElementById('confirmSave');
     
     let selectedFormat = 'jpg';
+    let originalImageData = null; // Храним оригинал для отката
     let savedImage = localStorage.getItem('currentImage');
     let savedName = localStorage.getItem('currentImageName');
     let savedSize = localStorage.getItem('currentImageSize');
@@ -375,9 +392,31 @@
 
     if (savedImage) {
         previewImg.src = savedImage;
+        originalImageData = savedImage; // Сохраняем оригинал при загрузке
         fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
     } else {
         fileInfoDiv.innerText = 'Нет загруженного изображения';
+    }
+
+    // === ФУНКЦИЯ ОТКАТА ИЗМЕНЕНИЙ ===
+    function resetToOriginal() {
+        if (originalImageData) {
+            previewImg.src = originalImageData;
+            resetTransform();
+            showNotification('↺ Изменения отменены');
+            
+            // Обновляем информацию о файле
+            if (savedName && savedSize && savedFormat) {
+                fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
+            }
+            
+            // Обновляем рамку
+            setTimeout(() => {
+                if (cropFrame.style.display === 'block') {
+                    initCrop();
+                }
+            }, 100);
+        }
     }
 
     // === МАСШТАБИРОВАНИЕ ===
@@ -799,6 +838,9 @@
         savedSize = newSize;
         savedFormat = selectedFormat.toUpperCase();
         
+        // Обновляем оригинал для отката
+        originalImageData = croppedImage;
+        
         resetTransform();
         closeModal();
         showNotification('✅ Изображение сохранено!');
@@ -815,6 +857,14 @@
             e.preventDefault();
             e.stopPropagation();
             openModal();
+        });
+    }
+    
+    if (resetBtn) {
+        resetBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            resetToOriginal();
         });
     }
     
@@ -850,6 +900,10 @@
 
     previewImg.onload = () => {
         resetTransform();
+        // Сохраняем оригинал при первой загрузке
+        if (!originalImageData) {
+            originalImageData = previewImg.src;
+        }
     };
     
     initAccordion();
