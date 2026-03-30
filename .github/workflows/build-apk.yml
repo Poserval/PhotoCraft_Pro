@@ -25,7 +25,7 @@ jobs:
           
       - name: Init Capacitor
         run: |
-          npx cap init PhotoCraft Pro com.photocraft.pro --web-dir=docs
+          npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
           npx cap add android
           
       - name: Sync files
