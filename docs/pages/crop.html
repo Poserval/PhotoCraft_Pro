@@ -16,7 +16,6 @@
             overflow: hidden;
         }
 
-        /* Основной контент — flex колонка */
         .main-content {
             flex: 1;
             display: flex;
@@ -25,7 +24,6 @@
             overflow: hidden;
         }
 
-        /* ФИКСИРОВАННАЯ ВЕРХНЯЯ ЧАСТЬ (ОПП + информация) */
         .fixed-top {
             flex-shrink: 0;
         }
@@ -54,7 +52,6 @@
             text-align: center;
         }
 
-        /* Панель управления — занимает оставшееся место */
         .control-panel {
             margin-top: 16px;
             background: white;
@@ -67,7 +64,6 @@
             min-height: 0;
         }
 
-        /* Заголовок панели — фиксирован */
         .panel-header {
             display: flex;
             justify-content: space-between;
@@ -105,7 +101,6 @@
             text-align: center;
         }
 
-        /* ПРОКРУЧИВАЕМАЯ ОБЛАСТЬ (только вкладки) */
         .scrollable-area {
             flex: 1;
             overflow-y: auto;
@@ -142,7 +137,6 @@
         }
         .accordion-content.open { display: block; }
 
-        /* Горизонтальный скролл для форматов */
         .aspect-scroll-container {
             overflow-x: auto;
             overflow-y: hidden;
@@ -293,7 +287,6 @@
 <body>
 
 <div class="main-content">
-    <!-- ФИКСИРОВАННАЯ ВЕРХНЯЯ ЧАСТЬ -->
     <div class="fixed-top">
         <div class="preview-wrapper" id="previewWrapper">
             <img id="previewImg" class="preview-image" src="" alt="preview">
@@ -308,7 +301,6 @@
         <div id="fileInfo" class="file-info"></div>
     </div>
 
-    <!-- ПАНЕЛЬ УПРАВЛЕНИЯ С ПРОКРУТКОЙ ВКЛАДОК -->
     <div class="control-panel">
         <div class="panel-header">
             <button class="back-btn" id="backBtn">←</button>
@@ -319,7 +311,6 @@
             </div>
         </div>
         
-        <!-- ТОЛЬКО ЭТА ОБЛАСТЬ ПРОКРУЧИВАЕТСЯ -->
         <div class="scrollable-area">
             <div class="accordion-item">
                 <button class="accordion-header" data-accordion="crop">
@@ -700,229 +691,4 @@
                     if (activeHandle.includes('n')) {
                         newY = startRect.y + (startRect.h - newH);
                     }
-                } else if (activeHandle.includes('s') || activeHandle.includes('n')) {
-                    newW = newH * aspectRatio;
-                    if (activeHandle.includes('w')) {
-                        newX = startRect.x + (startRect.w - newW);
-                    }
-                }
-            }
-            
-            newW = Math.max(50, newW);
-            newH = Math.max(50, newH);
-            
-            if (newX < 0) {
-                newW = newW + newX;
-                newX = 0;
-            }
-            if (newY < 0) {
-                newH = newH + newY;
-                newY = 0;
-            }
-            if (newX + newW > containerRect.width) {
-                newW = containerRect.width - newX;
-            }
-            if (newY + newH > containerRect.height) {
-                newH = containerRect.height - newY;
-            }
-            
-            newRect = { w: newW, h: newH, x: newX, y: newY };
-        }
-        
-        frameRect = newRect;
-        updateFramePosition();
-    }
-
-    function endResize() { activeHandle = null; }
-
-    // === АККОРДЕОН ===
-    function initAccordion() {
-        document.querySelectorAll('.accordion-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const accordionId = header.dataset.accordion;
-                const content = document.getElementById(`accordion-${accordionId}`);
-                const arrow = header.querySelector('.accordion-arrow');
-                
-                document.querySelectorAll('.accordion-content').forEach(c => {
-                    if (c !== content) c.classList.remove('open');
-                });
-                document.querySelectorAll('.accordion-arrow').forEach(a => {
-                    if (a !== arrow) a.classList.remove('open');
-                });
-                
-                content.classList.toggle('open');
-                arrow.classList.toggle('open');
-                
-                if (accordionId === 'crop' && content.classList.contains('open')) {
-                    initCrop();
-                } else if (accordionId === 'crop' && !content.classList.contains('open')) {
-                    disableCrop();
-                }
-            });
-        });
-    }
-
-    // === ФОРМАТЫ ===
-    function initAspectButtons() {
-        document.querySelectorAll('.aspect-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                
-                const aspect = btn.dataset.aspect;
-                currentAspect = aspect;
-                aspectRatio = getAspectRatio(aspect);
-                
-                if (cropFrame.style.display === 'block') {
-                    const containerRect = previewWrapper.getBoundingClientRect();
-                    const centerX = frameRect.x + frameRect.w / 2;
-                    const centerY = frameRect.y + frameRect.h / 2;
-                    
-                    if (aspectRatio !== null) {
-                        let newW, newH;
-                        if (aspectRatio >= 1) {
-                            newW = frameRect.w;
-                            newH = newW / aspectRatio;
-                        } else {
-                            newH = frameRect.h;
-                            newW = newH * aspectRatio;
-                        }
-                        
-                        frameRect.w = Math.min(newW, containerRect.width - 20);
-                        frameRect.h = Math.min(newH, containerRect.height - 20);
-                        frameRect.x = Math.max(0, Math.min(centerX - frameRect.w/2, containerRect.width - frameRect.w));
-                        frameRect.y = Math.max(0, Math.min(centerY - frameRect.h/2, containerRect.height - frameRect.h));
-                    }
-                    updateFramePosition();
-                }
-            });
-        });
-    }
-
-    // === ОБРАБОТЧИКИ ДЛЯ МАРКЕРОВ ===
-    function bindCropHandlers() {
-        document.querySelectorAll('.crop-corner, .crop-edge').forEach(handle => {
-            const handleType = handle.classList[1];
-            handle.addEventListener('touchstart', (e) => startResize(e, handleType));
-            handle.addEventListener('mousedown', (e) => startResize(e, handleType));
-        });
-        cropFrame.addEventListener('touchstart', startMove);
-        cropFrame.addEventListener('mousedown', startMove);
-    }
-
-    previewImg.addEventListener('touchstart', handleTouchStart);
-    previewImg.addEventListener('touchmove', handleTouchMove);
-    previewImg.addEventListener('touchend', handleTouchEnd);
-    
-    bindCropHandlers();
-    window.addEventListener('touchmove', onResizeMove);
-    window.addEventListener('mousemove', onResizeMove);
-    window.addEventListener('touchend', endResize);
-    window.addEventListener('mouseup', endResize);
-
-    // === СОХРАНЕНИЕ ===
-    function openModal() {
-        if (saveModal) {
-            saveModal.style.display = 'flex';
-            const baseName = savedName ? savedName.split('.')[0] : 'photo';
-            if (fileNameInput) fileNameInput.value = baseName;
-        }
-    }
-    
-    function closeModal() {
-        if (saveModal) saveModal.style.display = 'none';
-    }
-    
-    function cropAndSave() {
-        const img = previewImg;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const containerRect = previewWrapper.getBoundingClientRect();
-        const imgRect = img.getBoundingClientRect();
-        
-        const scaleX = img.naturalWidth / imgRect.width;
-        const scaleY = img.naturalHeight / imgRect.height;
-        
-        let cropX = (frameRect.x - (imgRect.left - containerRect.left)) * scaleX;
-        let cropY = (frameRect.y - (imgRect.top - containerRect.top)) * scaleY;
-        let cropW = frameRect.w * scaleX;
-        let cropH = frameRect.h * scaleY;
-        
-        cropX = Math.max(0, cropX);
-        cropY = Math.max(0, cropY);
-        cropW = Math.min(cropW, img.naturalWidth - cropX);
-        cropH = Math.min(cropH, img.naturalHeight - cropY);
-        
-        canvas.width = cropW;
-        canvas.height = cropH;
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        
-        let mimeType = 'image/jpeg';
-        let fileExt = 'jpg';
-        switch(selectedFormat) {
-            case 'png': mimeType = 'image/png'; fileExt = 'png'; break;
-            case 'webp': mimeType = 'image/webp'; fileExt = 'webp'; break;
-            case 'bmp': mimeType = 'image/bmp'; fileExt = 'bmp'; break;
-            default: mimeType = 'image/jpeg'; fileExt = 'jpg';
-        }
-        
-        const fileName = fileNameInput ? fileNameInput.value : 'photo';
-        const croppedImage = canvas.toDataURL(mimeType, 0.92);
-        
-        const link = document.createElement('a');
-        link.download = `${fileName}.${fileExt}`;
-        link.href = croppedImage;
-        link.click();
-        
-        previewImg.src = croppedImage;
-        currentImageData = croppedImage;
-        
-        const newSize = canvas.width * canvas.height * 4;
-        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
-        
-        localStorage.setItem('currentImage', croppedImage);
-        localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
-        localStorage.setItem('currentImageSize', newSize);
-        localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
-        
-        savedImage = croppedImage;
-        savedName = `${fileName}.${fileExt}`;
-        savedSize = newSize;
-        savedFormat = selectedFormat.toUpperCase();
-        
-        resetTransform();
-        closeModal();
-        
-        setTimeout(() => {
-            if (cropFrame.style.display === 'block') {
-                initCrop();
-            }
-        }, 100);
-    }
-    
-    if (saveBtn) saveBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
-    if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetImageToOriginal(); });
-    if (cancelSave) cancelSave.addEventListener('click', closeModal);
-    if (confirmSave) confirmSave.addEventListener('click', cropAndSave);
-    if (formatButtons) formatButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            formatButtons.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedFormat = btn.dataset.format;
-        });
-    });
-    if (backBtn) backBtn.addEventListener('click', () => window.location.href = '../index.html');
-
-    previewImg.onload = () => {
-        resetTransform();
-        if (!originalImageData) originalImageData = previewImg.src;
-        if (!currentImageData) currentImageData = previewImg.src;
-    };
-    
-    initAccordion();
-    initAspectButtons();
-</script>
-</body>
-</html>
+                } else if
