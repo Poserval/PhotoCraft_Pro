@@ -807,9 +807,16 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ В DOWNLOADS ===
+    // === СОХРАНЕНИЕ С ПРОВЕРКОЙ FILESYSTEM ===
     async function saveImageToDownloads(base64Data, fileName, fileExt) {
         try {
+            // Проверяем, что Capacitor и Filesystem доступны
+            if (!window.Capacitor || !window.Capacitor.Filesystem) {
+                console.error('Capacitor.Filesystem не доступен');
+                showCenterNotification('❌ Ошибка: Filesystem не доступен');
+                return false;
+            }
+            
             // Сохраняем в папку Documents (доступна на Android)
             const result = await Capacitor.Filesystem.writeFile({
                 path: `${fileName}.${fileExt}`,
