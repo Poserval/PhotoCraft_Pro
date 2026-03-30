@@ -3,16 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>PhotoCraft Pro — Редактирование фото</title>
+    <title>PhotoCraft Pro — AI Photo Studio</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f9fafb;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            touch-action: pan-x pan-y;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .logo {
+            height: 120px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .slogan {
+            text-align: center;
+            padding: 16px 16px 0 16px;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .slogan.hidden {
+            display: none;
+        }
+        .main-title {
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            white-space: nowrap;
+        }
+        .formats-row {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 6px;
+            letter-spacing: 0.3px;
         }
 
         .main-content {
@@ -23,463 +66,166 @@
         }
 
         .preview-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .preview-area {
             background: #f3f4f6;
             border: 2px dashed #d1d5db;
             border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
             aspect-ratio: 3 / 4;
             width: 100%;
-            position: relative;
             overflow: hidden;
+            position: relative;
             touch-action: none;
         }
-        .preview-image {
+        .preview-area:active {
+            background: #e5e7eb;
+        }
+        
+        .preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #6b7280;
+            text-align: center;
+            padding: 20px;
+        }
+        .preview-placeholder-icon {
+            font-size: 48px;
+            opacity: 0.6;
+        }
+        .preview-placeholder-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: #9ca3af;
+        }
+        .preview-placeholder-hint {
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-top: 4px;
+        }
+        .image-container {
+            position: relative;
             width: 100%;
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
+            border-radius: 18px;
             display: block;
             transform-origin: center center;
+            cursor: grab;
+            transition: transform 0.05s ease-out;
+        }
+        .preview-image:active {
+            cursor: grabbing;
         }
         .file-info {
-            margin-top: 8px;
+            margin-top: 12px;
             font-size: 12px;
             color: #6b7280;
             text-align: center;
         }
 
-        .control-panel {
-            margin-top: 16px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            overflow: hidden;
+        .tools-row {
             display: flex;
-            flex-direction: column;
-            max-height: 50vh;
-        }
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
-            flex-shrink: 0;
-            gap: 12px;
-        }
-        .back-btn, .reset-btn, .save-btn {
-            width: 44px;
-            height: 44px;
-            background: #e5e7eb;
-            border: none;
-            border-radius: 16px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            transition: all 0.2s;
-        }
-        .back-btn:active, .reset-btn:active, .save-btn:active {
-            transform: scale(0.96);
-        }
-        .save-btn { background: #3b82f6; color: white; }
-        .reset-btn { background: #ef4444; color: white; }
-        .panel-title { 
-            font-size: 18px; 
-            font-weight: 600; 
-            color: #1f2937;
-            flex: 1;
-            text-align: center;
-        }
-
-        .scrollable-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0;
-        }
-
-        .accordion-item {
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .accordion-header {
-            width: 100%;
-            padding: 16px;
-            background: white;
-            border: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 500;
-            color: #1f2937;
-            cursor: pointer;
-        }
-        .accordion-header:active { background: #f3f4f6; }
-        .accordion-arrow {
-            font-size: 18px;
-            color: #9ca3af;
-            transition: transform 0.2s;
-        }
-        .accordion-arrow.open { transform: rotate(180deg); }
-        .accordion-content {
-            padding: 0 16px 16px 16px;
-            background: #f9fafb;
-            display: none;
-        }
-        .accordion-content.open { display: block; }
-
-        /* Горизонтальный скролл для форматов */
-        .aspect-scroll-container {
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
-            margin-top: 8px;
-            padding-bottom: 8px;
-        }
-        .aspect-grid {
-            display: inline-flex;
-            gap: 12px;
-            padding: 4px 0;
-        }
-        .aspect-btn {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 12px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-width: 70px;
-        }
-        .aspect-btn:active { transform: scale(0.96); background: #f3f4f6; }
-        .aspect-btn.selected { background: #3b82f6; border-color: #3b82f6; color: white; }
-        .aspect-number { font-size: 20px; font-weight: 700; line-height: 1; }
-
-        .tools-placeholder {
-            text-align: center;
-            padding: 24px;
-            color: #6b7280;
-            font-size: 14px;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            padding: 24px;
-            width: 90%;
-            max-width: 320px;
-            margin: 20px;
-        }
-        .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-        .modal-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            font-size: 16px;
-            margin-bottom: 16px;
-        }
-        .format-buttons {
-            display: flex;
-            gap: 10px;
+            gap: 20px;
+            margin-top: 20px;
             margin-bottom: 20px;
-            flex-wrap: wrap;
+            flex-shrink: 0;
         }
-        .format-btn {
-            flex: 1;
-            padding: 10px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 500;
-        }
-        .format-btn.selected {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-        }
-        .modal-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .modal-btn.cancel { background: #e5e7eb; color: #374151; }
-        .modal-btn.save { background: #3b82f6; color: white; }
-
-        .crop-overlay { display: none; }
-        .crop-frame {
-            position: absolute;
-            border: 2px solid white;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-            cursor: grab;
-            z-index: 20;
-            display: none;
-        }
-        .crop-frame:active { cursor: grabbing; }
-        .crop-corner {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            border: 2px solid white;
-            pointer-events: auto;
-        }
-        .crop-corner.nw { top: -2px; left: -2px; border-right: none; border-bottom: none; cursor: nw-resize; }
-        .crop-corner.ne { top: -2px; right: -2px; border-left: none; border-bottom: none; cursor: ne-resize; }
-        .crop-corner.sw { bottom: -2px; left: -2px; border-right: none; border-top: none; cursor: sw-resize; }
-        .crop-corner.se { bottom: -2px; right: -2px; border-left: none; border-top: none; cursor: se-resize; }
-        .crop-edge {
-            position: absolute;
+        .tool-icon {
+            width: 60px;
+            height: 60px;
             background: white;
-            pointer-events: auto;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 20px;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            user-select: none;
+            touch-action: manipulation;
         }
-        .crop-edge.top { top: -3px; left: 50%; transform: translateX(-50%); width: 30px; height: 4px; cursor: n-resize; }
-        .crop-edge.bottom { bottom: -3px; left: 50%; transform: translateX(-50%); width: 30px; height: 4px; cursor: s-resize; }
-        .crop-edge.left { left: -3px; top: 50%; transform: translateY(-50%); width: 4px; height: 30px; cursor: w-resize; }
-        .crop-edge.right { right: -3px; top: 50%; transform: translateY(-50%); width: 4px; height: 30px; cursor: e-resize; }
-        
-        @keyframes fadeOut {
-            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            70% { opacity: 1; }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+        .tool-icon:active {
+            transform: scale(0.96);
+            background: #f3f4f6;
         }
-        
-        @keyframes fadeOutCenter {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            70% { opacity: 1; }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); visibility: hidden; }
+        .tool-icon.disabled {
+            opacity: 0.5;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-<div class="main-content">
-    <div class="preview-wrapper" id="previewWrapper">
-        <img id="previewImg" class="preview-image" src="" alt="preview">
-        <div id="cropOverlay" class="crop-overlay"></div>
-        <div id="cropFrame" class="crop-frame">
-            <div class="crop-corner nw"></div><div class="crop-corner ne"></div>
-            <div class="crop-corner sw"></div><div class="crop-corner se"></div>
-            <div class="crop-edge top"></div><div class="crop-edge bottom"></div>
-            <div class="crop-edge left"></div><div class="crop-edge right"></div>
-        </div>
-    </div>
-    <div id="fileInfo" class="file-info"></div>
-
-    <div class="control-panel">
-        <div class="panel-header">
-            <button class="back-btn" id="backBtn">←</button>
-            <span class="panel-title">Редактирование фото</span>
-            <div style="display: flex; gap: 8px;">
-                <button class="reset-btn" id="resetBtn" title="Отменить изменения изображения">↺</button>
-                <button class="save-btn" id="saveBtn">💾</button>
-            </div>
-        </div>
-        <div class="scrollable-area">
-            <div class="accordion-item">
-                <button class="accordion-header" data-accordion="crop">
-                    <span>✂️ Кадрирование</span>
-                    <span class="accordion-arrow">▼</span>
-                </button>
-                <div class="accordion-content" id="accordion-crop">
-                    <div class="aspect-scroll-container">
-                        <div class="aspect-grid" id="aspectGrid">
-                            <button class="aspect-btn selected" data-aspect="free">
-                                <div class="aspect-number">✂️</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Свободный</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="1:1">
-                                <div class="aspect-number">1:1</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Квадрат</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="2:3">
-                                <div class="aspect-number">2:3</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Вертикаль</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="3:2">
-                                <div class="aspect-number">3:2</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Горизонт</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="3:4">
-                                <div class="aspect-number">3:4</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Портрет</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="4:3">
-                                <div class="aspect-number">4:3</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Классика</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="9:16">
-                                <div class="aspect-number">9:16</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Story</div>
-                            </button>
-                            <button class="aspect-btn" data-aspect="16:9">
-                                <div class="aspect-number">16:9</div>
-                                <div style="font-size: 10px; margin-top: 4px;">Кино</div>
-                            </button>
-                        </div>
-                    </div>
-                    <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                        👆 Потяните за уголки или линии | 🖐️ Перемещайте увеличенное фото
-                    </div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <button class="accordion-header" data-accordion="correction">
-                    <span>🎨 Коррекция</span>
-                    <span class="accordion-arrow">▼</span>
-                </button>
-                <div class="accordion-content" id="accordion-correction">
-                    <div class="tools-placeholder">🛠 Инструменты коррекции в разработке</div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <button class="accordion-header" data-accordion="color">
-                    <span>🌈 Цвет</span>
-                    <span class="accordion-arrow">▼</span>
-                </button>
-                <div class="accordion-content" id="accordion-color">
-                    <div class="tools-placeholder">🎨 Инструменты цвета в разработке</div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <button class="accordion-header" data-accordion="effects">
-                    <span>✨ Эффекты</span>
-                    <span class="accordion-arrow">▼</span>
-                </button>
-                <div class="accordion-content" id="accordion-effects">
-                    <div class="tools-placeholder">🎭 Эффекты и фильтры в разработке</div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <button class="accordion-header" data-accordion="text">
-                    <span>📝 Текст</span>
-                    <span class="accordion-arrow">▼</span>
-                </button>
-                <div class="accordion-content" id="accordion-text">
-                    <div class="tools-placeholder">📝 Добавление текста в разработке</div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="header">
+    <img src="/PhotoCraft_Pro/assets/icon-header.png" class="logo" alt="PhotoCraft Pro">
 </div>
 
-<div id="saveModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-title">💾 Сохранить изображение</div>
-        <input type="text" id="fileName" class="modal-input" placeholder="Имя файла" value="photo">
-        <div class="format-buttons" id="formatButtons">
-            <button class="format-btn" data-format="png">PNG</button>
-            <button class="format-btn selected" data-format="jpg">JPEG</button>
-            <button class="format-btn" data-format="webp">WEBP</button>
-            <button class="format-btn" data-format="bmp">BMP</button>
+<div class="slogan" id="slogan">
+    <div class="main-title">Умное редактирование фото с AI</div>
+    <div class="formats-row">JPG · PNG · WEBP · GIF · BMP · TIFF · SVG</div>
+</div>
+
+<div class="main-content">
+    <div class="preview-wrapper">
+        <div id="uploadZone" class="preview-area">
+            <div id="previewPlaceholder" class="preview-placeholder">
+                <div class="preview-placeholder-icon">📸</div>
+                <div class="preview-placeholder-text">Нажмите для загрузки изображения</div>
+                <div class="preview-placeholder-hint">Поддерживаются JPG, PNG, WEBP, GIF, BMP, TIFF, SVG</div>
+            </div>
+            <div class="image-container" style="display: none;" id="imageContainer">
+                <img id="previewImg" class="preview-image" alt="preview">
+            </div>
         </div>
-        <div class="modal-buttons">
-            <button class="modal-btn cancel" id="cancelSave">Отмена</button>
-            <button class="modal-btn save" id="confirmSave">Сохранить</button>
-        </div>
+        <div id="fileInfo" class="file-info" style="display: none;"></div>
+    </div>
+
+    <div class="tools-row">
+        <div class="tool-icon" data-tool="edit">✏️</div>
+        <div class="tool-icon disabled" data-tool="crop">✂️</div>
+        <div class="tool-icon disabled" data-tool="inpaint">🖌️</div>
+        <div class="tool-icon disabled" data-tool="replace-bg">🖼️</div>
     </div>
 </div>
 
 <script>
-    const previewWrapper = document.getElementById('previewWrapper');
+    const uploadZone = document.getElementById('uploadZone');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const imageContainer = document.getElementById('imageContainer');
     const previewImg = document.getElementById('previewImg');
     const fileInfoDiv = document.getElementById('fileInfo');
-    const backBtn = document.getElementById('backBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const cropFrame = document.getElementById('cropFrame');
-    const saveModal = document.getElementById('saveModal');
-    const fileNameInput = document.getElementById('fileName');
-    const formatButtons = document.querySelectorAll('.format-btn');
-    const cancelSave = document.getElementById('cancelSave');
-    const confirmSave = document.getElementById('confirmSave');
+    const slogan = document.getElementById('slogan');
+    const previewArea = document.getElementById('uploadZone');
     
-    let selectedFormat = 'jpg';
-    let originalImageData = null;
     let currentImageData = null;
-    let savedImage = localStorage.getItem('currentImage');
-    let savedName = localStorage.getItem('currentImageName');
-    let savedSize = localStorage.getItem('currentImageSize');
-    let savedFormat = localStorage.getItem('currentImageFormat');
-
-    if (savedImage) {
-        previewImg.src = savedImage;
-        originalImageData = savedImage;
-        currentImageData = savedImage;
-        fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
-    } else {
-        fileInfoDiv.innerText = 'Нет загруженного изображения';
-    }
-
-    // === УВЕДОМЛЕНИЕ В ЦЕНТРЕ ===
-    function showCenterNotification(message) {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 500;
-            z-index: 2000;
-            text-align: center;
-            white-space: nowrap;
-            animation: fadeOutCenter 1.5s ease forwards;
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 1500);
-    }
-
-    // === ОТКАТ ИЗОБРАЖЕНИЯ К ОРИГИНАЛУ ===
-    function resetImageToOriginal() {
-        if (originalImageData) {
-            previewImg.src = originalImageData;
-            currentImageData = originalImageData;
-            resetTransform();
-            showCenterNotification('Правки отменены');
-            if (savedName && savedSize && savedFormat) {
-                fileInfoDiv.innerText = `${savedName} • ${(savedSize/1024/1024).toFixed(2)} MB • ${savedFormat}`;
-            }
-        }
-    }
-
+    
     // === МАСШТАБИРОВАНИЕ ===
     let currentScale = 1;
     let currentTranslateX = 0;
@@ -490,11 +236,11 @@
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
-
+    
     function getScaledImageRect() {
         if (!previewImg.complete || previewImg.naturalWidth === 0) return { width: 0, height: 0 };
         const naturalWidth = previewImg.naturalWidth, naturalHeight = previewImg.naturalHeight;
-        const containerRect = previewWrapper.getBoundingClientRect();
+        const containerRect = previewArea.getBoundingClientRect();
         const containerAspect = containerRect.width / containerRect.height;
         const imageAspect = naturalWidth / naturalHeight;
         let baseWidth, baseHeight;
@@ -507,9 +253,9 @@
         }
         return { width: baseWidth * currentScale, height: baseHeight * currentScale };
     }
-
+    
     function clampTranslate() {
-        const containerRect = previewWrapper.getBoundingClientRect();
+        const containerRect = previewArea.getBoundingClientRect();
         const { width: scaledWidth, height: scaledHeight } = getScaledImageRect();
         let maxX = Math.max(0, (scaledWidth - containerRect.width) / 2);
         let maxY = Math.max(0, (scaledHeight - containerRect.height) / 2);
@@ -519,14 +265,14 @@
         else currentTranslateY = Math.max(-maxY, Math.min(maxY, currentTranslateY));
         previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
     }
-
+    
     function resetTransform() {
         currentScale = 1;
         currentTranslateX = 0;
         currentTranslateY = 0;
         previewImg.style.transform = `translate(0px, 0px) scale(1)`;
     }
-
+    
     function zoomFromCenter(newScale) {
         if (!previewImg.complete || previewImg.naturalWidth === 0) return;
         const newScaleClamped = Math.max(1, newScale);
@@ -538,8 +284,10 @@
         previewImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
         clampTranslate();
     }
-
+    
     function handleTouchStart(e) {
+        if (!currentImageData) return;
+        e.preventDefault();
         if (e.touches.length === 2) {
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -555,356 +303,83 @@
             }
         }
     }
-
+    
     function handleTouchMove(e) {
+        if (!currentImageData) return;
+        if (!isZooming && !isDragging) return;
+        e.preventDefault();
         if (isZooming && e.touches.length === 2) {
-            e.preventDefault();
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
             const newDistance = Math.hypot(dx, dy);
             zoomFromCenter(initialScale * (newDistance / initialDistance));
         } else if (isDragging && e.touches.length === 1 && currentScale > 1) {
-            e.preventDefault();
             currentTranslateX = e.touches[0].clientX - dragStartX;
             currentTranslateY = e.touches[0].clientY - dragStartY;
             clampTranslate();
         }
     }
-
-    function handleTouchEnd() {
+    
+    function handleTouchEnd(e) {
         isZooming = false;
         isDragging = false;
         if (currentScale < 1) resetTransform();
         setTimeout(() => clampTranslate(), 50);
     }
-
-    // === РАМКА КАДРИРОВАНИЯ ===
-    let frameRect = { x: 50, y: 50, w: 200, h: 200 };
-    let activeHandle = null;
-    let startX, startY, startRect;
-    let currentAspect = 'free';
-    let aspectRatio = null;
-
-    function getAspectRatio(aspect) {
-        switch(aspect) {
-            case '1:1': return 1;
-            case '2:3': return 2/3;
-            case '3:2': return 3/2;
-            case '3:4': return 3/4;
-            case '4:3': return 4/3;
-            case '9:16': return 9/16;
-            case '16:9': return 16/9;
-            default: return null;
-        }
+    
+    // === ЗАГРУЗКА ФОТО ===
+    function updatePreview(dataUrl, name, size, format) {
+        currentImageData = dataUrl;
+        previewImg.src = dataUrl;
+        previewImg.style.display = 'block';
+        imageContainer.style.display = 'flex';
+        previewPlaceholder.style.display = 'none';
+        fileInfoDiv.style.display = 'block';
+        fileInfoDiv.innerText = `${name} • ${(size/1024/1024).toFixed(2)} MB • ${format}`;
+        slogan.classList.add('hidden');
+        resetTransform();
+        
+        localStorage.setItem('currentImage', dataUrl);
+        localStorage.setItem('currentImageName', name);
+        localStorage.setItem('currentImageSize', size);
+        localStorage.setItem('currentImageFormat', format);
     }
-
-    function updateFramePosition() {
-        const rect = previewWrapper.getBoundingClientRect();
-        cropFrame.style.left = frameRect.x + 'px';
-        cropFrame.style.top = frameRect.y + 'px';
-        cropFrame.style.width = frameRect.w + 'px';
-        cropFrame.style.height = frameRect.h + 'px';
-    }
-
-    function initCrop() {
-        const rect = previewWrapper.getBoundingClientRect();
-        const size = Math.min(rect.width, rect.height) * 0.8;
-        frameRect = { 
-            x: (rect.width - size) / 2, 
-            y: (rect.height - size) / 2, 
-            w: size, 
-            h: size 
+    
+    function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const format = file.type.split('/')[1].toUpperCase();
+            updatePreview(e.target.result, file.name, file.size, format);
         };
-        updateFramePosition();
-        cropFrame.style.display = 'block';
+        reader.readAsDataURL(file);
     }
-
-    function disableCrop() {
-        cropFrame.style.display = 'none';
-        activeHandle = null;
-    }
-
-    function startResize(e, handleType) {
-        e.preventDefault();
-        e.stopPropagation();
-        activeHandle = handleType;
-        startX = e.touches ? e.touches[0].clientX : e.clientX;
-        startY = e.touches ? e.touches[0].clientY : e.clientY;
-        startRect = { ...frameRect };
-    }
-
-    function startMove(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        activeHandle = 'move';
-        startX = e.touches ? e.touches[0].clientX : e.clientX;
-        startY = e.touches ? e.touches[0].clientY : e.clientY;
-        startRect = { ...frameRect };
-    }
-
-    function onResizeMove(e) {
-        if (!activeHandle) return;
-        e.preventDefault();
-        const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-        const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-        const dx = currentX - startX;
-        const dy = currentY - startY;
-        const containerRect = previewWrapper.getBoundingClientRect();
-        let newRect = { ...startRect };
-        
-        if (activeHandle === 'move') {
-            let newX = startRect.x + dx;
-            let newY = startRect.y + dy;
-            newX = Math.max(0, Math.min(newX, containerRect.width - startRect.w));
-            newY = Math.max(0, Math.min(newY, containerRect.height - startRect.h));
-            newRect.x = newX;
-            newRect.y = newY;
-        } else {
-            let newW = startRect.w;
-            let newH = startRect.h;
-            let newX = startRect.x;
-            let newY = startRect.y;
-            
-            if (activeHandle.includes('e')) newW = Math.max(50, startRect.w + dx);
-            if (activeHandle.includes('w')) {
-                newW = Math.max(50, startRect.w - dx);
-                newX = startRect.x + (startRect.w - newW);
-            }
-            if (activeHandle.includes('s')) newH = Math.max(50, startRect.h + dy);
-            if (activeHandle.includes('n')) {
-                newH = Math.max(50, startRect.h - dy);
-                newY = startRect.y + (startRect.h - newH);
-            }
-            
-            if (aspectRatio !== null) {
-                if (activeHandle.includes('e') || activeHandle.includes('w')) {
-                    newH = newW / aspectRatio;
-                    if (activeHandle.includes('n')) {
-                        newY = startRect.y + (startRect.h - newH);
-                    }
-                } else {
-                    newW = newH * aspectRatio;
-                    if (activeHandle.includes('w')) {
-                        newX = startRect.x + (startRect.w - newW);
-                    }
-                }
-            }
-            
-            newW = Math.max(50, newW);
-            newH = Math.max(50, newH);
-            
-            if (newX < 0) {
-                newW = newW + newX;
-                newX = 0;
-            }
-            if (newY < 0) {
-                newH = newH + newY;
-                newY = 0;
-            }
-            if (newX + newW > containerRect.width) {
-                newW = containerRect.width - newX;
-            }
-            if (newY + newH > containerRect.height) {
-                newH = containerRect.height - newY;
-            }
-            
-            newRect = { w: newW, h: newH, x: newX, y: newY };
-        }
-        
-        frameRect = newRect;
-        updateFramePosition();
-    }
-
-    function endResize() { activeHandle = null; }
-
-    // === АККОРДЕОН ===
-    function initAccordion() {
-        document.querySelectorAll('.accordion-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const accordionId = header.dataset.accordion;
-                const content = document.getElementById(`accordion-${accordionId}`);
-                const arrow = header.querySelector('.accordion-arrow');
-                
-                document.querySelectorAll('.accordion-content').forEach(c => {
-                    if (c !== content) c.classList.remove('open');
-                });
-                document.querySelectorAll('.accordion-arrow').forEach(a => {
-                    if (a !== arrow) a.classList.remove('open');
-                });
-                
-                content.classList.toggle('open');
-                arrow.classList.toggle('open');
-                
-                if (accordionId === 'crop' && content.classList.contains('open')) {
-                    initCrop();
-                } else if (accordionId === 'crop' && !content.classList.contains('open')) {
-                    disableCrop();
-                }
-            });
-        });
-    }
-
-    // === ФОРМАТЫ ===
-    function initAspectButtons() {
-        document.querySelectorAll('.aspect-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                
-                const aspect = btn.dataset.aspect;
-                currentAspect = aspect;
-                aspectRatio = getAspectRatio(aspect);
-                
-                if (cropFrame.style.display === 'block') {
-                    const containerRect = previewWrapper.getBoundingClientRect();
-                    const centerX = frameRect.x + frameRect.w / 2;
-                    const centerY = frameRect.y + frameRect.h / 2;
-                    
-                    if (aspectRatio !== null) {
-                        let newW, newH;
-                        if (aspectRatio >= 1) {
-                            newW = frameRect.w;
-                            newH = newW / aspectRatio;
-                        } else {
-                            newH = frameRect.h;
-                            newW = newH * aspectRatio;
-                        }
-                        
-                        frameRect.w = Math.min(newW, containerRect.width - 20);
-                        frameRect.h = Math.min(newH, containerRect.height - 20);
-                        frameRect.x = Math.max(0, Math.min(centerX - frameRect.w/2, containerRect.width - frameRect.w));
-                        frameRect.y = Math.max(0, Math.min(centerY - frameRect.h/2, containerRect.height - frameRect.h));
-                    }
-                    updateFramePosition();
-                }
-            });
-        });
-    }
-
-    // === ОБРАБОТЧИКИ ДЛЯ МАРКЕРОВ ===
-    function bindCropHandlers() {
-        document.querySelectorAll('.crop-corner, .crop-edge').forEach(handle => {
-            const handleType = handle.classList[1];
-            handle.addEventListener('touchstart', (e) => startResize(e, handleType));
-            handle.addEventListener('mousedown', (e) => startResize(e, handleType));
-        });
-        cropFrame.addEventListener('touchstart', startMove);
-        cropFrame.addEventListener('mousedown', startMove);
-    }
-
+    
+    uploadZone.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => { if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]); };
+        input.click();
+    });
+    
     previewImg.addEventListener('touchstart', handleTouchStart);
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
     
-    bindCropHandlers();
-    window.addEventListener('touchmove', onResizeMove);
-    window.addEventListener('mousemove', onResizeMove);
-    window.addEventListener('touchend', endResize);
-    window.addEventListener('mouseup', endResize);
-
-    // === СОХРАНЕНИЕ ===
-    function openModal() {
-        if (saveModal) {
-            saveModal.style.display = 'flex';
-            const baseName = savedName ? savedName.split('.')[0] : 'photo';
-            if (fileNameInput) fileNameInput.value = baseName;
-        }
-    }
-    
-    function closeModal() {
-        if (saveModal) saveModal.style.display = 'none';
-    }
-    
-    function cropAndSave() {
-        const img = previewImg;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const containerRect = previewWrapper.getBoundingClientRect();
-        const imgRect = img.getBoundingClientRect();
-        
-        const scaleX = img.naturalWidth / imgRect.width;
-        const scaleY = img.naturalHeight / imgRect.height;
-        
-        let cropX = (frameRect.x - (imgRect.left - containerRect.left)) * scaleX;
-        let cropY = (frameRect.y - (imgRect.top - containerRect.top)) * scaleY;
-        let cropW = frameRect.w * scaleX;
-        let cropH = frameRect.h * scaleY;
-        
-        cropX = Math.max(0, cropX);
-        cropY = Math.max(0, cropY);
-        cropW = Math.min(cropW, img.naturalWidth - cropX);
-        cropH = Math.min(cropH, img.naturalHeight - cropY);
-        
-        canvas.width = cropW;
-        canvas.height = cropH;
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        
-        let mimeType = 'image/jpeg';
-        let fileExt = 'jpg';
-        switch(selectedFormat) {
-            case 'png': mimeType = 'image/png'; fileExt = 'png'; break;
-            case 'webp': mimeType = 'image/webp'; fileExt = 'webp'; break;
-            case 'bmp': mimeType = 'image/bmp'; fileExt = 'bmp'; break;
-            default: mimeType = 'image/jpeg'; fileExt = 'jpg';
-        }
-        
-        const fileName = fileNameInput ? fileNameInput.value : 'photo';
-        const croppedImage = canvas.toDataURL(mimeType, 0.92);
-        
-        const link = document.createElement('a');
-        link.download = `${fileName}.${fileExt}`;
-        link.href = croppedImage;
-        link.click();
-        
-        previewImg.src = croppedImage;
-        currentImageData = croppedImage;
-        
-        const newSize = canvas.width * canvas.height * 4;
-        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
-        
-        localStorage.setItem('currentImage', croppedImage);
-        localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
-        localStorage.setItem('currentImageSize', newSize);
-        localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
-        
-        savedImage = croppedImage;
-        savedName = `${fileName}.${fileExt}`;
-        savedSize = newSize;
-        savedFormat = selectedFormat.toUpperCase();
-        
-        resetTransform();
-        closeModal();
-        
-        setTimeout(() => {
-            if (cropFrame.style.display === 'block') {
-                initCrop();
-            }
-        }, 100);
-    }
-    
-    if (saveBtn) saveBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
-    if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetImageToOriginal(); });
-    if (cancelSave) cancelSave.addEventListener('click', closeModal);
-    if (confirmSave) confirmSave.addEventListener('click', cropAndSave);
-    if (formatButtons) formatButtons.forEach(btn => {
+    // Переход на страницу редактирования (кадрирование)
+    document.querySelectorAll('.tool-icon').forEach(btn => {
         btn.addEventListener('click', () => {
-            formatButtons.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedFormat = btn.dataset.format;
+            const tool = btn.dataset.tool;
+            if (tool === 'edit') {
+                if (currentImageData) {
+                    window.location.href = 'pages/crop.html';
+                } else {
+                    alert('Сначала загрузите изображение');
+                }
+            }
         });
     });
-    if (backBtn) backBtn.addEventListener('click', () => window.location.href = '../index.html');
-
-    previewImg.onload = () => {
-        resetTransform();
-        if (!originalImageData) originalImageData = previewImg.src;
-        if (!currentImageData) currentImageData = previewImg.src;
-    };
-    
-    initAccordion();
-    initAspectButtons();
 </script>
 </body>
 </html>
