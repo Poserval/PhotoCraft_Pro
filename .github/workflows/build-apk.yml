@@ -26,7 +26,7 @@ jobs:
           npm init -y
           
           npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8 @capacitor/cli@5.7.8
-          npm install @capacitor/filesystem@5.0.0 @capacitor/share@5.0.0 @capacitor/permissions@5.0.0
+          npm install @capacitor/filesystem@5.0.0 @capacitor/share@5.0.0
           
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
           npx cap add android
