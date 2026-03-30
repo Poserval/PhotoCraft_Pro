@@ -28,6 +28,19 @@ jobs:
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
           npx cap add android
           
+      - name: Fix AndroidManifest icons
+        run: |
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            echo "✅ AndroidManifest.xml найден"
+            # Убеждаемся, что иконка указана правильно
+            sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@mipmap\/ic_launcher"/g' android/app/src/main/AndroidManifest.xml
+            sed -i 's/android:roundIcon="@mipmap\/ic_launcher_round"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml
+            echo "✅ AndroidManifest.xml исправлен"
+          else
+            echo "❌ AndroidManifest.xml НЕ НАЙДЕН!"
+            exit 1
+          fi
+          
       - name: Copy app icons to Android project
         run: |
           mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -39,7 +52,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick
           
-          # Генерируем все размеры из icon-app-512.png
           convert docs/assets/icon-app-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           convert docs/assets/icon-app-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           
@@ -55,10 +67,24 @@ jobs:
           convert docs/assets/icon-app-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           convert docs/assets/icon-app-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
-      - name: Create icon references in AndroidManifest
+      - name: Create adaptive icon
         run: |
-          # Убеждаемся, что в манифесте указана иконка
-          sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@mipmap\/ic_launcher"/g' android/app/src/main/AndroidManifest.xml
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
+EOF
+          
+          mkdir -p android/app/src/main/res/values
+          cat > android/app/src/main/res/values/ic_launcher_background.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#3b82f6</color>
+</resources>
+EOF
           
       - name: Sync files
         run: npx cap sync android
