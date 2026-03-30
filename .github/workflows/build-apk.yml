@@ -31,8 +31,8 @@ jobs:
       - name: Install Capacitor plugins
         run: |
           cd android
-          # Используем --legacy-peer-deps для обхода конфликтов версий
-          npm install @capacitor/filesystem@5.2.2 @capacitor/share@5.2.2 --legacy-peer-deps
+          # Устанавливаем последние версии 5.x
+          npm install @capacitor/filesystem@5.2.3 @capacitor/share@5.2.3 --legacy-peer-deps
           npx cap sync
           
       - name: OVERWRITE Capacitor default icons with our icons
