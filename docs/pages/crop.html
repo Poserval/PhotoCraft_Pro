@@ -812,9 +812,61 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ С ПОДДЕРЖКОЙ APK ===
+    // === ЗАПРОС РАЗРЕШЕНИЙ ===
+    async function requestPermissions() {
+        if (!window.Capacitor || !window.Capacitor.isNative) {
+            console.log('Не Capacitor, разрешения не нужны');
+            return true;
+        }
+        
+        try {
+            // Проверяем, есть ли плагин Permissions
+            if (!Capacitor.Permissions) {
+                console.warn('Permissions plugin not available');
+                return true;
+            }
+            
+            const permissions = [
+                'android.permission.READ_EXTERNAL_STORAGE',
+                'android.permission.WRITE_EXTERNAL_STORAGE'
+            ];
+            
+            const result = await Capacitor.Permissions.query({
+                permissions: permissions
+            });
+            
+            console.log('Текущие разрешения:', result);
+            
+            const needToAsk = permissions.some(p => result[p] !== 'granted');
+            
+            if (needToAsk) {
+                const requestResult = await Capacitor.Permissions.request({
+                    permissions: permissions
+                });
+                
+                console.log('Результат запроса:', requestResult);
+                
+                const allGranted = permissions.every(p => requestResult[p] === 'granted');
+                
+                if (!allGranted) {
+                    showCenterNotification('❌ Нужны разрешения для сохранения');
+                    return false;
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Ошибка запроса разрешений:', error);
+            return true;
+        }
+    }
+
+    // === СОХРАНЕНИЕ С ПРОВЕРКОЙ РАЗРЕШЕНИЙ ===
     async function saveToDevice(base64Data, fileName, fileExt) {
         try {
+            const hasPermission = await requestPermissions();
+            if (!hasPermission) return false;
+            
             const savedFile = await Capacitor.Filesystem.writeFile({
                 path: `${fileName}.${fileExt}`,
                 data: base64Data,
