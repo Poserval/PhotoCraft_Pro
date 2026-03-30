@@ -39,10 +39,10 @@ jobs:
           cd ..
           rm -rf temp
           
-      - name: Add permissions to AndroidManifest.xml
+      - name: Add permissions for Android 13+
         run: |
-          sed -i '/<application/i\    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
-          sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' android/app/src/main/AndroidManifest.xml
+          # Для Android 13+ используем READ_MEDIA_IMAGES вместо WRITE_EXTERNAL_STORAGE
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           echo "✅ Разрешения добавлены"
           
       - name: Copy our icons to Android project
