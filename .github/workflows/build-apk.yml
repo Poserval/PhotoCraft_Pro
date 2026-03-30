@@ -18,30 +18,31 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Install Capacitor CLI and create project
+      - name: Install Capacitor
         run: |
-          # Устанавливаем Capacitor CLI
           npm install -g @capacitor/cli@5.7.8
           
-          # Создаём папку для Capacitor
-          mkdir -p capacitor-project
-          cd capacitor-project
+      - name: Create Capacitor project
+        run: |
+          # Создаём временную папку
+          mkdir temp
+          cd temp
           
           # Инициализируем npm проект
           npm init -y
           
-          # Устанавливаем Capacitor core и android
+          # Устанавливаем Capacitor
           npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
           
           # Инициализируем Capacitor
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
           npx cap add android
           
-          # Копируем ВСЮ папку android (включая node_modules) в корень
+          # Копируем android папку обратно
           cp -r android ../
           
           cd ..
-          rm -rf capacitor-project
+          rm -rf temp
           
       - name: Copy our icons to Android project
         run: |
@@ -67,6 +68,19 @@ jobs:
           
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          
+      - name: Create capacitor.config.json
+        run: |
+          cat > capacitor.config.json << 'EOF'
+          {
+            "appId": "com.photocraft.pro",
+            "appName": "PhotoCraftPro",
+            "webDir": "docs",
+            "server": {
+              "androidScheme": "https"
+            }
+          }
+          EOF
           
       - name: Sync Capacitor
         run: npx cap sync android
@@ -96,3 +110,4 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           compression-level: 0
           if-no-files-found: error
+          
