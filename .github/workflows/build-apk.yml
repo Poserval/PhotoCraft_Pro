@@ -25,10 +25,7 @@ jobs:
           
           npm init -y
           
-          # Устанавливаем Capacitor 5.7.8
           npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8 @capacitor/cli@5.7.8
-          
-          # Устанавливаем плагины
           npm install @capacitor/filesystem@5.0.0 @capacitor/share@5.0.0
           
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
@@ -44,17 +41,13 @@ jobs:
           
       - name: Add permissions to AndroidManifest.xml
         run: |
-          # Добавляем разрешения для записи файлов
-          sed -i '/<application/i\
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
-    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          # Добавляем разрешения
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           
-          # Добавляем также requestLegacyExternalStorage для Android 10
+          # Добавляем requestLegacyExternalStorage
           sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' android/app/src/main/AndroidManifest.xml
           
           echo "✅ Разрешения добавлены"
-          cat android/app/src/main/AndroidManifest.xml | grep permission
           
       - name: Copy our icons to Android project
         run: |
