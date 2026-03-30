@@ -1,6 +1,6 @@
 {
   "appId": "com.photocraft.pro",
-  "appName": "PhotoCraft Pro",
+  "appName": "PhotoCraftPro",
   "webDir": "docs",
   "server": {
     "androidScheme": "https"
