@@ -417,10 +417,6 @@
 </div>
 
 <script>
-    // Проверка на Capacitor (APK)
-    const isNative = window.Capacitor && window.Capacitor.isNative;
-    console.log('Запущено в APK:', isNative);
-
     const previewWrapper = document.getElementById('previewWrapper');
     const previewImg = document.getElementById('previewImg');
     const fileInfoDiv = document.getElementById('fileInfo');
@@ -816,19 +812,15 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ (с поддержкой APK) ===
-    async function saveToDevice(dataUrl, fileName, fileExt) {
+    // === СОХРАНЕНИЕ С ПОДДЕРЖКОЙ APK ===
+    async function saveToDevice(base64Data, fileName, fileExt) {
         try {
-            const base64Data = dataUrl.split(',')[1];
-            
-            // Сохраняем во временный файл
             const savedFile = await Capacitor.Filesystem.writeFile({
                 path: `${fileName}.${fileExt}`,
                 data: base64Data,
                 directory: Capacitor.Filesystem.Directory.Cache
             });
             
-            // Открываем диалог сохранения/шаринга
             await Capacitor.Share.share({
                 title: 'Сохранить изображение',
                 text: `${fileName}.${fileExt}`,
@@ -836,9 +828,11 @@
             });
             
             showCenterNotification('✅ Изображение готово к сохранению!');
+            return true;
         } catch (error) {
             console.error('Ошибка сохранения:', error);
             showCenterNotification('❌ Ошибка сохранения');
+            return false;
         }
     }
 
@@ -854,7 +848,7 @@
         if (saveModal) saveModal.style.display = 'none';
     }
     
-    function cropAndSave() {
+    async function cropAndSave() {
         const img = previewImg;
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -890,10 +884,13 @@
         
         const fileName = fileNameInput ? fileNameInput.value : 'photo';
         const croppedImage = canvas.toDataURL(mimeType, 0.92);
+        const base64Data = croppedImage.split(',')[1];
         
-        // Сохраняем в зависимости от среды (APK или браузер)
+        // Проверяем, запущено ли в Capacitor (APK)
+        const isNative = window.Capacitor && window.Capacitor.isNative;
+        
         if (isNative) {
-            saveToDevice(croppedImage, fileName, fileExt);
+            await saveToDevice(base64Data, fileName, fileExt);
         } else {
             const link = document.createElement('a');
             link.download = `${fileName}.${fileExt}`;
