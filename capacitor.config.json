@@ -4,5 +4,17 @@
   "webDir": "docs",
   "server": {
     "androidScheme": "https"
+  },
+  "plugins": {
+    "Filesystem": {
+      "android": {
+        "allowUploads": true
+      }
+    },
+    "Share": {
+      "android": {
+        "subject": "PhotoCraft Pro"
+      }
+    }
   }
 }
