@@ -93,7 +93,6 @@
             text-align: center;
         }
 
-        /* Скроллируемая область с вкладками */
         .scrollable-area {
             flex: 1;
             overflow-y: auto;
@@ -237,6 +236,8 @@
         }
 
         .crop-overlay { display: none; }
+        
+        /* Новая рамка с тонкими маркерами */
         .crop-frame {
             position: absolute;
             border: 2px solid white;
@@ -246,23 +247,82 @@
             display: none;
         }
         .crop-frame:active { cursor: grabbing; }
-        .crop-handle {
+        
+        /* Угловые маркеры (уголки) */
+        .crop-corner {
             position: absolute;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border: 2px solid #3b82f6;
-            border-radius: 6px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
             pointer-events: auto;
         }
-        .crop-handle.nw { top: -12px; left: -12px; cursor: nw-resize; }
-        .crop-handle.n { top: -12px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .crop-handle.ne { top: -12px; right: -12px; cursor: ne-resize; }
-        .crop-handle.w { top: 50%; left: -12px; transform: translateY(-50%); cursor: w-resize; }
-        .crop-handle.e { top: 50%; right: -12px; transform: translateY(-50%); cursor: e-resize; }
-        .crop-handle.sw { bottom: -12px; left: -12px; cursor: sw-resize; }
-        .crop-handle.s { bottom: -12px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .crop-handle.se { bottom: -12px; right: -12px; cursor: se-resize; }
+        .crop-corner.nw {
+            top: -2px;
+            left: -2px;
+            border-right: none;
+            border-bottom: none;
+            cursor: nw-resize;
+        }
+        .crop-corner.ne {
+            top: -2px;
+            right: -2px;
+            border-left: none;
+            border-bottom: none;
+            cursor: ne-resize;
+        }
+        .crop-corner.sw {
+            bottom: -2px;
+            left: -2px;
+            border-right: none;
+            border-top: none;
+            cursor: sw-resize;
+        }
+        .crop-corner.se {
+            bottom: -2px;
+            right: -2px;
+            border-left: none;
+            border-top: none;
+            cursor: se-resize;
+        }
+        
+        /* Центральные маркеры (линии) */
+        .crop-edge {
+            position: absolute;
+            background: white;
+            pointer-events: auto;
+        }
+        .crop-edge.top {
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 4px;
+            cursor: n-resize;
+        }
+        .crop-edge.bottom {
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 4px;
+            cursor: s-resize;
+        }
+        .crop-edge.left {
+            left: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 30px;
+            cursor: w-resize;
+        }
+        .crop-edge.right {
+            right: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 30px;
+            cursor: e-resize;
+        }
         
         @keyframes fadeOut {
             0% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -278,9 +338,16 @@
         <img id="previewImg" class="preview-image" src="" alt="preview">
         <div id="cropOverlay" class="crop-overlay"></div>
         <div id="cropFrame" class="crop-frame">
-            <div class="crop-handle nw"></div><div class="crop-handle n"></div><div class="crop-handle ne"></div>
-            <div class="crop-handle w"></div><div class="crop-handle e"></div>
-            <div class="crop-handle sw"></div><div class="crop-handle s"></div><div class="crop-handle se"></div>
+            <!-- Угловые маркеры -->
+            <div class="crop-corner nw"></div>
+            <div class="crop-corner ne"></div>
+            <div class="crop-corner sw"></div>
+            <div class="crop-corner se"></div>
+            <!-- Центральные маркеры -->
+            <div class="crop-edge top"></div>
+            <div class="crop-edge bottom"></div>
+            <div class="crop-edge left"></div>
+            <div class="crop-edge right"></div>
         </div>
     </div>
     <div id="fileInfo" class="file-info"></div>
@@ -312,7 +379,7 @@
                         <button class="aspect-btn" data-aspect="16:9">16:9</button>
                     </div>
                     <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                        👆 Потяните за уголки рамки | 🖐️ Перемещайте увеличенное фото
+                        👆 Потяните за уголки или линии | 🖐️ Перемещайте увеличенное фото
                     </div>
                 </div>
             </div>
@@ -566,10 +633,10 @@
         activeHandle = null;
     }
 
-    function startResize(e, handle) {
+    function startResize(e, handleType) {
         e.preventDefault();
         e.stopPropagation();
-        activeHandle = handle;
+        activeHandle = handleType;
         startX = e.touches ? e.touches[0].clientX : e.clientX;
         startY = e.touches ? e.touches[0].clientY : e.clientY;
         startRect = { ...frameRect };
@@ -607,6 +674,7 @@
             let newX = startRect.x;
             let newY = startRect.y;
             
+            // Определяем направление изменения
             if (activeHandle.includes('e')) newW = Math.max(50, startRect.w + dx);
             if (activeHandle.includes('w')) {
                 newW = Math.max(50, startRect.w - dx);
@@ -721,17 +789,29 @@
         });
     });
 
-    // === ОБРАБОТЧИКИ ===
+    // === ОБРАБОТЧИКИ ДЛЯ НОВЫХ МАРКЕРОВ ===
+    function bindCropHandlers() {
+        // Угловые маркеры
+        document.querySelectorAll('.crop-corner').forEach(corner => {
+            corner.addEventListener('touchstart', (e) => startResize(e, corner.classList[1]));
+            corner.addEventListener('mousedown', (e) => startResize(e, corner.classList[1]));
+        });
+        // Центральные маркеры
+        document.querySelectorAll('.crop-edge').forEach(edge => {
+            edge.addEventListener('touchstart', (e) => startResize(e, edge.classList[1]));
+            edge.addEventListener('mousedown', (e) => startResize(e, edge.classList[1]));
+        });
+        // Перемещение рамки
+        cropFrame.addEventListener('touchstart', startMove);
+        cropFrame.addEventListener('mousedown', startMove);
+    }
+
+    // === ОСНОВНЫЕ ОБРАБОТЧИКИ ===
     previewImg.addEventListener('touchstart', handleTouchStart);
     previewImg.addEventListener('touchmove', handleTouchMove);
     previewImg.addEventListener('touchend', handleTouchEnd);
-
-    document.querySelectorAll('.crop-handle').forEach(handle => {
-        handle.addEventListener('touchstart', (e) => startResize(e, handle.classList[1]));
-        handle.addEventListener('mousedown', (e) => startResize(e, handle.classList[1]));
-    });
-    cropFrame.addEventListener('touchstart', startMove);
-    cropFrame.addEventListener('mousedown', startMove);
+    
+    bindCropHandlers();
     window.addEventListener('touchmove', onResizeMove);
     window.addEventListener('mousemove', onResizeMove);
     window.addEventListener('touchend', endResize);
@@ -845,69 +925,4 @@
         
         resetTransform();
         closeModal();
-        showNotification('✅ Изображение сохранено!');
-        
-        setTimeout(() => {
-            if (cropFrame.style.display === 'block') {
-                initCrop();
-            }
-        }, 100);
-    }
-    
-    if (saveBtn) {
-        saveBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openModal();
-        });
-    }
-    
-    if (resetBtn) {
-        resetBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            resetToOriginal();
-        });
-    }
-    
-    if (cancelSave) {
-        cancelSave.addEventListener('click', closeModal);
-    }
-    
-    if (confirmSave) {
-        confirmSave.addEventListener('click', cropAndSave);
-    }
-    
-    if (formatButtons) {
-        formatButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                formatButtons.forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                selectedFormat = btn.dataset.format;
-            });
-        });
-    }
-    
-    function saveAndGoBack() {
-        const currentImageSrc = previewImg.src;
-        if (currentImageSrc && currentImageSrc !== savedImage) {
-            localStorage.setItem('currentImage', currentImageSrc);
-        }
-        window.location.href = '../index.html';
-    }
-    
-    if (backBtn) {
-        backBtn.addEventListener('click', saveAndGoBack);
-    }
-
-    previewImg.onload = () => {
-        resetTransform();
-        if (!originalImageData) {
-            originalImageData = previewImg.src;
-        }
-    };
-    
-    initAccordion();
-</script>
-</body>
-</html>
+        showNotification('✅
