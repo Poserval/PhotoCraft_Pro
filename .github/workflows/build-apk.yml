@@ -39,9 +39,16 @@ jobs:
           cd ..
           rm -rf temp
           
+      - name: Check Capacitor plugins
+        run: |
+          echo "=== Проверка установленных плагинов ==="
+          ls -la node_modules/@capacitor/ || echo "Нет папки @capacitor"
+          echo "=== Содержимое capacitor.config.json ==="
+          cat android/app/src/main/assets/capacitor.config.json || echo "Файл не найден"
+          
       - name: Add permissions for Android 13+
         run: |
-          sed -i '/<application/i\    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           echo "✅ Разрешения добавлены"
           
       - name: Copy our icons to Android project
