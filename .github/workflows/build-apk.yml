@@ -1,0 +1,67 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: Install Capacitor
+        run: |
+          npm install -g @capacitor/cli @capacitor/core
+          npm install @capacitor/android
+          
+      - name: Create Capacitor project
+        run: |
+          npx cap init PhotoCraftPro com.photocraft.pro --web-dir=docs
+          npx cap add android
+          
+      - name: Copy assets to Android
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          
+          cp docs/assets/icon-72.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
+          cp docs/assets/icon-96.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+          cp docs/assets/icon-128.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
+          cp docs/assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
+          cp docs/assets/icon-512.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || true
+          
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 33.0.0
+          
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: PhotoCraftPro-APK
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
