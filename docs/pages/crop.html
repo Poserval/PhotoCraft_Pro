@@ -10,16 +10,24 @@
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: #f9fafb;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
+        /* Основной контент — flex колонка */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             padding: 16px;
+            overflow: hidden;
+        }
+
+        /* ФИКСИРОВАННАЯ ВЕРХНЯЯ ЧАСТЬ (ОПП + информация) */
+        .fixed-top {
+            flex-shrink: 0;
         }
 
         .preview-wrapper {
@@ -46,6 +54,7 @@
             text-align: center;
         }
 
+        /* Панель управления — занимает оставшееся место */
         .control-panel {
             margin-top: 16px;
             background: white;
@@ -54,8 +63,11 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            max-height: 50vh;
+            flex: 1;
+            min-height: 0;
         }
+
+        /* Заголовок панели — фиксирован */
         .panel-header {
             display: flex;
             justify-content: space-between;
@@ -93,6 +105,7 @@
             text-align: center;
         }
 
+        /* ПРОКРУЧИВАЕМАЯ ОБЛАСТЬ (только вкладки) */
         .scrollable-area {
             flex: 1;
             overflow-y: auto;
@@ -280,18 +293,22 @@
 <body>
 
 <div class="main-content">
-    <div class="preview-wrapper" id="previewWrapper">
-        <img id="previewImg" class="preview-image" src="" alt="preview">
-        <div id="cropOverlay" class="crop-overlay"></div>
-        <div id="cropFrame" class="crop-frame">
-            <div class="crop-corner nw"></div><div class="crop-corner ne"></div>
-            <div class="crop-corner sw"></div><div class="crop-corner se"></div>
-            <div class="crop-edge top"></div><div class="crop-edge bottom"></div>
-            <div class="crop-edge left"></div><div class="crop-edge right"></div>
+    <!-- ФИКСИРОВАННАЯ ВЕРХНЯЯ ЧАСТЬ -->
+    <div class="fixed-top">
+        <div class="preview-wrapper" id="previewWrapper">
+            <img id="previewImg" class="preview-image" src="" alt="preview">
+            <div id="cropOverlay" class="crop-overlay"></div>
+            <div id="cropFrame" class="crop-frame">
+                <div class="crop-corner nw"></div><div class="crop-corner ne"></div>
+                <div class="crop-corner sw"></div><div class="crop-corner se"></div>
+                <div class="crop-edge top"></div><div class="crop-edge bottom"></div>
+                <div class="crop-edge left"></div><div class="crop-edge right"></div>
+            </div>
         </div>
+        <div id="fileInfo" class="file-info"></div>
     </div>
-    <div id="fileInfo" class="file-info"></div>
 
+    <!-- ПАНЕЛЬ УПРАВЛЕНИЯ С ПРОКРУТКОЙ ВКЛАДОК -->
     <div class="control-panel">
         <div class="panel-header">
             <button class="back-btn" id="backBtn">←</button>
@@ -301,6 +318,8 @@
                 <button class="save-btn" id="saveBtn">💾</button>
             </div>
         </div>
+        
+        <!-- ТОЛЬКО ЭТА ОБЛАСТЬ ПРОКРУЧИВАЕТСЯ -->
         <div class="scrollable-area">
             <div class="accordion-item">
                 <button class="accordion-header" data-accordion="crop">
@@ -616,13 +635,11 @@
         activeHandle = null;
     }
 
-    // Определяем, можно ли использовать грани (только в свободном режиме)
     function canUseEdges() {
-        return aspectRatio === null; // null = свободный режим
+        return aspectRatio === null;
     }
 
     function startResize(e, handleType) {
-        // Если это грань (top, bottom, left, right) и режим не свободный — не реагируем
         if (['top', 'bottom', 'left', 'right'].includes(handleType) && !canUseEdges()) {
             return;
         }
@@ -835,77 +852,4 @@
         
         cropX = Math.max(0, cropX);
         cropY = Math.max(0, cropY);
-        cropW = Math.min(cropW, img.naturalWidth - cropX);
-        cropH = Math.min(cropH, img.naturalHeight - cropY);
-        
-        canvas.width = cropW;
-        canvas.height = cropH;
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        
-        let mimeType = 'image/jpeg';
-        let fileExt = 'jpg';
-        switch(selectedFormat) {
-            case 'png': mimeType = 'image/png'; fileExt = 'png'; break;
-            case 'webp': mimeType = 'image/webp'; fileExt = 'webp'; break;
-            case 'bmp': mimeType = 'image/bmp'; fileExt = 'bmp'; break;
-            default: mimeType = 'image/jpeg'; fileExt = 'jpg';
-        }
-        
-        const fileName = fileNameInput ? fileNameInput.value : 'photo';
-        const croppedImage = canvas.toDataURL(mimeType, 0.92);
-        
-        const link = document.createElement('a');
-        link.download = `${fileName}.${fileExt}`;
-        link.href = croppedImage;
-        link.click();
-        
-        previewImg.src = croppedImage;
-        currentImageData = croppedImage;
-        
-        const newSize = canvas.width * canvas.height * 4;
-        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
-        
-        localStorage.setItem('currentImage', croppedImage);
-        localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
-        localStorage.setItem('currentImageSize', newSize);
-        localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
-        
-        savedImage = croppedImage;
-        savedName = `${fileName}.${fileExt}`;
-        savedSize = newSize;
-        savedFormat = selectedFormat.toUpperCase();
-        
-        resetTransform();
-        closeModal();
-        
-        setTimeout(() => {
-            if (cropFrame.style.display === 'block') {
-                initCrop();
-            }
-        }, 100);
-    }
-    
-    if (saveBtn) saveBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
-    if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetImageToOriginal(); });
-    if (cancelSave) cancelSave.addEventListener('click', closeModal);
-    if (confirmSave) confirmSave.addEventListener('click', cropAndSave);
-    if (formatButtons) formatButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            formatButtons.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedFormat = btn.dataset.format;
-        });
-    });
-    if (backBtn) backBtn.addEventListener('click', () => window.location.href = '../index.html');
-
-    previewImg.onload = () => {
-        resetTransform();
-        if (!originalImageData) originalImageData = previewImg.src;
-        if (!currentImageData) currentImageData = previewImg.src;
-    };
-    
-    initAccordion();
-    initAspectButtons();
-</script>
-</body>
-</html>
+        cropW = Math.min(cropW, img.naturalWidth - cropX
