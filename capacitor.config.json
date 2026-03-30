@@ -4,25 +4,5 @@
   "webDir": "docs",
   "server": {
     "androidScheme": "https"
-  },
-  "plugins": {
-    "Filesystem": {
-      "android": {
-        "allowUploads": true
-      }
-    },
-    "Share": {
-      "android": {
-        "subject": "PhotoCraft Pro"
-      }
-    }
-  },
-  "android": {
-    "buildOptions": {
-      "keystorePath": "keystore.jks",
-      "keystoreAlias": "photocraft",
-      "keystorePassword": "photocraft123",
-      "keystoreAliasPassword": "photocraft123"
-    }
   }
 }
