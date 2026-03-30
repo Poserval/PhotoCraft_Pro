@@ -30,20 +30,34 @@ jobs:
           
       - name: Copy app icons to Android project
         run: |
-          mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           
-          cp docs/assets/icon-72.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || echo "icon-72.png not found"
-          cp docs/assets/icon-96.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || echo "icon-96.png not found"
-          cp docs/assets/icon-128.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || echo "icon-128.png not found"
-          cp docs/assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || echo "icon-192.png not found"
-          cp docs/assets/icon-512.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || echo "icon-512.png not found"
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
           
-          # Также копируем для круглой иконки (адаптивная)
-          cp docs/assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png 2>/dev/null || true
+          # mdpi - 48x48
+          convert docs/assets/icon-app-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert docs/assets/icon-app-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          
+          # hdpi - 72x72
+          convert docs/assets/icon-app-512.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert docs/assets/icon-app-512.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          
+          # xhdpi - 96x96
+          convert docs/assets/icon-app-512.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert docs/assets/icon-app-512.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          
+          # xxhdpi - 144x144
+          convert docs/assets/icon-app-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert docs/assets/icon-app-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          
+          # xxxhdpi - 192x192
+          convert docs/assets/icon-app-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          convert docs/assets/icon-app-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
       - name: Sync files
         run: npx cap sync android
@@ -73,3 +87,4 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           compression-level: 0
           if-no-files-found: error
+          
