@@ -852,4 +852,77 @@
         
         cropX = Math.max(0, cropX);
         cropY = Math.max(0, cropY);
-        cropW = Math.min(cropW, img.naturalWidth - cropX
+        cropW = Math.min(cropW, img.naturalWidth - cropX);
+        cropH = Math.min(cropH, img.naturalHeight - cropY);
+        
+        canvas.width = cropW;
+        canvas.height = cropH;
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+        
+        let mimeType = 'image/jpeg';
+        let fileExt = 'jpg';
+        switch(selectedFormat) {
+            case 'png': mimeType = 'image/png'; fileExt = 'png'; break;
+            case 'webp': mimeType = 'image/webp'; fileExt = 'webp'; break;
+            case 'bmp': mimeType = 'image/bmp'; fileExt = 'bmp'; break;
+            default: mimeType = 'image/jpeg'; fileExt = 'jpg';
+        }
+        
+        const fileName = fileNameInput ? fileNameInput.value : 'photo';
+        const croppedImage = canvas.toDataURL(mimeType, 0.92);
+        
+        const link = document.createElement('a');
+        link.download = `${fileName}.${fileExt}`;
+        link.href = croppedImage;
+        link.click();
+        
+        previewImg.src = croppedImage;
+        currentImageData = croppedImage;
+        
+        const newSize = canvas.width * canvas.height * 4;
+        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
+        
+        localStorage.setItem('currentImage', croppedImage);
+        localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
+        localStorage.setItem('currentImageSize', newSize);
+        localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
+        
+        savedImage = croppedImage;
+        savedName = `${fileName}.${fileExt}`;
+        savedSize = newSize;
+        savedFormat = selectedFormat.toUpperCase();
+        
+        resetTransform();
+        closeModal();
+        
+        setTimeout(() => {
+            if (cropFrame.style.display === 'block') {
+                initCrop();
+            }
+        }, 100);
+    }
+    
+    if (saveBtn) saveBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+    if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetImageToOriginal(); });
+    if (cancelSave) cancelSave.addEventListener('click', closeModal);
+    if (confirmSave) confirmSave.addEventListener('click', cropAndSave);
+    if (formatButtons) formatButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            formatButtons.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedFormat = btn.dataset.format;
+        });
+    });
+    if (backBtn) backBtn.addEventListener('click', () => window.location.href = '../index.html');
+
+    previewImg.onload = () => {
+        resetTransform();
+        if (!originalImageData) originalImageData = previewImg.src;
+        if (!currentImageData) currentImageData = previewImg.src;
+    };
+    
+    initAccordion();
+    initAspectButtons();
+</script>
+</body>
+</html>
