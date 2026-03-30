@@ -1,0 +1,16 @@
+{
+  "appId": "com.photocraft.pro",
+  "appName": "PhotoCraft Pro",
+  "webDir": "docs",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "keystore.jks",
+      "keystoreAlias": "photocraft",
+      "keystorePassword": "photocraft123",
+      "keystoreAliasPassword": "photocraft123"
+    }
+  }
+}
