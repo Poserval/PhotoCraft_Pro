@@ -6,6 +6,7 @@
     "androidScheme": "https"
   },
   "android": {
+    "icon": "docs/assets/icon-app-512.png",
     "buildOptions": {
       "keystorePath": "keystore.jks",
       "keystoreAlias": "photocraft",
