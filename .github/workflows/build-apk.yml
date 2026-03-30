@@ -28,6 +28,23 @@ jobs:
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
           npx cap add android
           
+      - name: Copy app icons to Android project
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          
+          cp docs/assets/icon-72.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || echo "icon-72.png not found"
+          cp docs/assets/icon-96.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || echo "icon-96.png not found"
+          cp docs/assets/icon-128.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || echo "icon-128.png not found"
+          cp docs/assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || echo "icon-192.png not found"
+          cp docs/assets/icon-512.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || echo "icon-512.png not found"
+          
+          # Также копируем для круглой иконки (адаптивная)
+          cp docs/assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png 2>/dev/null || true
+          
       - name: Sync files
         run: npx cap sync android
           
