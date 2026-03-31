@@ -778,24 +778,43 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ (с выбором папки) ===
-    async function saveWithPicker(base64Data, fileName, mimeType) {
+    // === СОХРАНЕНИЕ (с вызовом системного диалога) ===
+    async function saveWithSystemDialog(base64Data, fileName, mimeType) {
         try {
             if (!window.Capacitor || !window.Capacitor.Filesystem) {
                 console.error('Capacitor не доступен');
                 return false;
             }
             
-            // Запрашиваем выбор папки через системный диалог
-            const result = await Capacitor.Filesystem.writeFile({
-                path: `${fileName}`,
+            // Сохраняем во временную папку
+            const tempFile = await Capacitor.Filesystem.writeFile({
+                path: `temp_${Date.now()}_${fileName}`,
                 data: base64Data,
-                directory: Capacitor.Filesystem.Directory.Documents,
-                recursive: true
+                directory: Capacitor.Filesystem.Directory.Cache
             });
             
-            console.log('Файл сохранён:', result.uri);
-            showCenterNotification(`✅ Сохранено: ${fileName}\n📁 Папка Documents`);
+            console.log('Временный файл создан:', tempFile.uri);
+            
+            // Открываем системный диалог сохранения через Share
+            if (window.Capacitor.Share) {
+                await Capacitor.Share.share({
+                    title: 'Сохранить изображение',
+                    text: fileName,
+                    url: tempFile.uri,
+                    dialogTitle: 'Сохранить в галерею'
+                });
+                showCenterNotification('✅ Выберите "Сохранить изображение"');
+            } else {
+                // Если Share нет, сохраняем в Documents
+                const result = await Capacitor.Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Capacitor.Filesystem.Directory.Documents,
+                    recursive: true
+                });
+                showCenterNotification(`✅ Сохранено: ${fileName}\n📁 Папка Documents`);
+            }
+            
             return true;
         } catch (error) {
             console.error('Ошибка сохранения:', error);
@@ -858,8 +877,8 @@
         const isNative = window.Capacitor && window.Capacitor.isNative;
         
         if (isNative) {
-            showCenterNotification('💾 Выберите папку...');
-            await saveWithPicker(base64Data, `${fileName}.${fileExt}`, mimeType);
+            showCenterNotification('💾 Открывается системное окно...');
+            await saveWithSystemDialog(base64Data, `${fileName}.${fileExt}`, mimeType);
         } else {
             // Браузерная версия
             const link = document.createElement('a');
