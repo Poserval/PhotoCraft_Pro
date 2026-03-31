@@ -2,36 +2,22 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>PhotoCraft Pro — Тест сохранения</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            background: #f9fafb;
-            min-height: 100vh;
+            font-family: system-ui, sans-serif;
+            background: #f3f4f6;
             padding: 20px;
         }
-
         .container {
             max-width: 500px;
             margin: 0 auto;
             background: white;
             border-radius: 24px;
             padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-
-        .title {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .title h1 {
-            font-size: 20px;
-            color: #1f2937;
-        }
-
         .preview-area {
             background: #f3f4f6;
             border: 2px dashed #d1d5db;
@@ -49,10 +35,7 @@
             text-align: center;
             color: #6b7280;
         }
-        .preview-placeholder-icon {
-            font-size: 48px;
-            margin-bottom: 8px;
-        }
+        .preview-placeholder-icon { font-size: 48px; margin-bottom: 8px; }
         .preview-image {
             width: 100%;
             height: 100%;
@@ -65,13 +48,7 @@
             text-align: center;
             margin-bottom: 16px;
         }
-
-        .save-section {
-            margin-top: 16px;
-        }
-        .input-group {
-            margin-bottom: 16px;
-        }
+        .input-group { margin-bottom: 16px; }
         .input-group label {
             display: block;
             font-size: 14px;
@@ -96,23 +73,6 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-        }
-        .save-btn:active {
-            transform: scale(0.98);
-            background: #2563eb;
-        }
-        .reset-btn {
-            width: 100%;
-            padding: 14px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
         }
         .status {
             margin-top: 16px;
@@ -122,64 +82,30 @@
             font-size: 14px;
             display: none;
         }
-        .status.success {
-            background: #d1fae5;
-            color: #065f46;
-            display: block;
-        }
-        .status.error {
-            background: #fee2e2;
-            color: #991b1b;
-            display: block;
-        }
-        .note {
-            margin-top: 16px;
-            font-size: 12px;
-            color: #9ca3af;
-            text-align: center;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 12px;
-        }
+        .status.success { background: #d1fae5; color: #065f46; display: block; }
+        .status.error { background: #fee2e2; color: #991b1b; display: block; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <div class="title">
-        <h1>📸 Тест сохранения файла</h1>
-    </div>
-
+    <h2 style="text-align:center; margin-bottom:16px;">📸 Тест сохранения</h2>
+    
     <div id="uploadZone" class="preview-area">
         <div id="previewPlaceholder" class="preview-placeholder">
             <div class="preview-placeholder-icon">📸</div>
-            <div>Нажмите для загрузки изображения</div>
+            <div>Нажмите для загрузки</div>
         </div>
         <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
     </div>
-
     <div id="fileInfo" class="file-info"></div>
 
-    <div class="save-section">
-        <div class="input-group">
-            <label>Имя файла:</label>
-            <input type="text" id="fileName" value="test_photo" placeholder="Имя файла">
-        </div>
-        <div class="input-group">
-            <label>Формат:</label>
-            <div style="display: flex; gap: 10px;">
-                <button class="format-btn" data-format="jpg">JPEG</button>
-                <button class="format-btn" data-format="png">PNG</button>
-                <button class="format-btn" data-format="webp">WEBP</button>
-            </div>
-        </div>
-        <button class="save-btn" id="saveBtn">💾 Сохранить изображение</button>
-        <button class="reset-btn" id="resetBtn">↺ Сбросить</button>
+    <div class="input-group">
+        <label>Имя файла:</label>
+        <input type="text" id="fileName" value="photo">
     </div>
 
+    <button class="save-btn" id="saveBtn">💾 Сохранить изображение</button>
     <div id="status" class="status"></div>
-    <div class="note">
-        ⚡ Тест: после сохранения файл должен появиться в папке Загрузки телефона
-    </div>
 </div>
 
 <script>
@@ -189,67 +115,55 @@
     const fileInfoDiv = document.getElementById('fileInfo');
     const fileNameInput = document.getElementById('fileName');
     const saveBtn = document.getElementById('saveBtn');
-    const resetBtn = document.getElementById('resetBtn');
     const statusDiv = document.getElementById('status');
     
     let currentImageData = null;
-    let selectedFormat = 'jpg';
-    
-    // Выбор формата
-    document.querySelectorAll('.format-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedFormat = btn.dataset.format;
-        });
-        // по умолчанию JPEG
-        if (btn.dataset.format === 'jpg') btn.classList.add('selected');
-    });
     
     function showStatus(message, isError = false) {
         statusDiv.textContent = message;
         statusDiv.className = isError ? 'status error' : 'status success';
         setTimeout(() => {
             statusDiv.style.display = 'none';
-            statusDiv.className = 'status';
         }, 3000);
     }
     
-    // Сохранение через Blob + a.download
-    function saveAsBlob(base64Data, fileName, fileExt) {
-        try {
-            console.log('Начинаем сохранение...', fileName, fileExt);
-            
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            
-            let mimeType = 'image/jpeg';
-            if (fileExt === 'png') mimeType = 'image/png';
-            else if (fileExt === 'webp') mimeType = 'image/webp';
-            
-            const blob = new Blob([byteArray], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${fileName}.${fileExt}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            console.log('Ссылка создана, клик выполнен');
-            showStatus(`✅ Сохранено: ${fileName}.${fileExt}\n📁 Папка Загрузки`);
-            return true;
-        } catch (error) {
-            console.error('Ошибка сохранения:', error);
-            showStatus(`❌ Ошибка: ${error.message}`, true);
-            return false;
+    // === ПРЯМОЕ СОХРАНЕНИЕ ЧЕРЕЗ ИСПОЛЬЗОВАНИЕ ИНТЕНТА ===
+    function saveImage() {
+        if (!currentImageData) {
+            showStatus('❌ Сначала загрузите изображение', true);
+            return;
         }
+        
+        const fileName = fileNameInput.value.trim() || 'photo';
+        
+        // Создаём объект Blob из base64
+        const byteCharacters = atob(currentImageData.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+        
+        // Создаём ссылку на файл
+        const url = URL.createObjectURL(blob);
+        
+        // Для Android WebView: пробуем открыть Intent через специальный протокол
+        // Это единственный способ вызвать системное окно сохранения
+        const intentUrl = `intent://${url}#Intent;scheme=file;action=android.intent.action.VIEW;type=image/jpeg;end`;
+        
+        // Показываем сообщение, что нужно сохранить вручную
+        showStatus('⚠️ Нажмите и удерживайте изображение → "Сохранить изображение"', false);
+        
+        // Открываем изображение в новом окне
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+            setTimeout(() => {
+                newWindow.close();
+            }, 1000);
+        }
+        
+        URL.revokeObjectURL(url);
     }
     
     function updatePreview(dataUrl, name, size, format) {
@@ -262,10 +176,7 @@
     }
     
     function handleFile(file) {
-        if (!file || !file.type.startsWith('image/')) {
-            showStatus('❌ Пожалуйста, выберите изображение', true);
-            return;
-        }
+        if (!file || !file.type.startsWith('image/')) return;
         const reader = new FileReader();
         reader.onload = (e) => {
             const format = file.type.split('/')[1].toUpperCase();
@@ -284,44 +195,7 @@
         input.click();
     });
     
-    saveBtn.addEventListener('click', () => {
-        if (!currentImageData) {
-            showStatus('❌ Сначала загрузите изображение', true);
-            return;
-        }
-        
-        const fileName = fileNameInput.value.trim() || 'photo';
-        let fileExt = selectedFormat;
-        let mimeType = 'image/jpeg';
-        
-        if (selectedFormat === 'png') mimeType = 'image/png';
-        else if (selectedFormat === 'webp') mimeType = 'image/webp';
-        
-        console.log('Сохранение:', fileName, fileExt, mimeType);
-        
-        // Конвертируем currentImageData в нужный формат
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            const croppedImage = canvas.toDataURL(mimeType, 0.92);
-            const base64Data = croppedImage.split(',')[1];
-            
-            saveAsBlob(base64Data, fileName, fileExt);
-        };
-        img.src = currentImageData;
-    });
-    
-    resetBtn.addEventListener('click', () => {
-        currentImageData = null;
-        previewImg.style.display = 'none';
-        previewPlaceholder.style.display = 'flex';
-        fileInfoDiv.style.display = 'none';
-        showStatus('🔄 Изображение сброшено');
-    });
+    saveBtn.addEventListener('click', saveImage);
 </script>
 </body>
 </html>
