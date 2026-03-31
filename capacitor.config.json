@@ -1,19 +1,8 @@
 {
-  "appId": "com.photocraft.pro",
-  "appName": "PhotoCraftPro",
-  "webDir": "docs",
-  "server": {
-    "androidScheme": "https"
-  },
   "plugins": {
-    "Filesystem": {
+    "Download": {
       "android": {
         "allowUploads": true
-      }
-    },
-    "Share": {
-      "android": {
-        "subject": "PhotoCraft Pro"
       }
     }
   }
