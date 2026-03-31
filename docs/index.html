@@ -32,7 +32,6 @@
             cursor: pointer;
             margin-bottom: 16px;
             overflow: hidden;
-            position: relative;
         }
         .preview-placeholder { text-align: center; color: #6b7280; }
         .preview-placeholder-icon { font-size: 48px; margin-bottom: 8px; }
@@ -92,25 +91,6 @@
             color: #6b7280;
             text-align: center;
             font-family: monospace;
-            word-break: break-all;
-        }
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 20px;
-            right: 20px;
-            background: #1f2937;
-            color: white;
-            padding: 16px;
-            border-radius: 16px;
-            text-align: center;
-            z-index: 10000;
-            animation: slideUp 0.3s ease;
-            font-size: 14px;
-        }
-        @keyframes slideUp {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
@@ -163,50 +143,68 @@
         console.log('[DEBUG]', message);
     }
     
-    function showToast(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 5000);
-    }
-    
     async function saveImage() {
         if (!currentBlob) {
             showStatus('❌ Сначала загрузите изображение', 'error');
             return;
         }
         
-        showStatus('⏳ Открываю меню сохранения...', 'info');
+        showStatus('⏳ Сохранение...', 'info');
         
         try {
             const isCapacitor = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
             showDebug(`Режим: ${isCapacitor ? 'APK' : 'Веб'}`);
             
-            if (isCapacitor && Capacitor.Plugins && Capacitor.Plugins.Share) {
-                // APK: используем Share с Blob
-                showDebug('Использую Capacitor Share...');
+            if (isCapacitor && Capacitor.Plugins && Capacitor.Plugins.Filesystem && Capacitor.Plugins.Share) {
+                // APK: сохраняем через Filesystem, потом открываем Share
+                const { Filesystem, Share } = Capacitor.Plugins;
                 
-                // Конвертируем Blob в base64 для Share
-                const reader = new FileReader();
-                reader.onloadend = async function() {
-                    const base64 = reader.result;
+                // Конвертируем Blob в base64
+                const base64 = await blobToBase64(currentBlob);
+                // Убираем префикс data:image/...;base64,
+                const pureBase64 = base64.split(',')[1];
+                
+                const fileName = `photocraft_${Date.now()}.png`;
+                showDebug(`Сохраняем файл: ${fileName}`);
+                
+                // Сохраняем в кэш
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: pureBase64,
+                    directory: Filesystem.Directory.Cache
+                });
+                
+                // Получаем URI
+                const uri = await Filesystem.getUri({
+                    path: fileName,
+                    directory: Filesystem.Directory.Cache
+                });
+                
+                showDebug(`URI: ${uri.uri}`);
+                
+                // Открываем системное меню
+                await Share.share({
+                    title: 'Сохранить фото',
+                    text: 'PhotoCraft Pro',
+                    url: uri.uri
+                });
+                
+                showStatus('✅ Меню открыто! Выберите "Сохранить"', 'success');
+                
+                // Удаляем временный файл через 10 секунд
+                setTimeout(async () => {
                     try {
-                        await Capacitor.Plugins.Share.share({
-                            title: 'Сохранить фото',
-                            text: 'PhotoCraft Pro',
-                            url: base64
+                        await Filesystem.deleteFile({
+                            path: fileName,
+                            directory: Filesystem.Directory.Cache
                         });
-                        showStatus('✅ Меню открыто! Выберите "Сохранить"', 'success');
-                    } catch (shareError) {
-                        showDebug(`Share error: ${shareError.message}`);
-                        fallbackToLongPress();
-                    }
-                };
-                reader.readAsDataURL(currentBlob);
+                        showDebug('Временный файл удалён');
+                    } catch(e) {}
+                }, 10000);
                 
             } else if (isCapacitor) {
-                // APK без Share
+                // APK без плагинов
+                showDebug('Плагины не загружены');
                 fallbackToLongPress();
             } else {
                 // Веб-версия
@@ -228,9 +226,17 @@
         }
     }
     
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+    
     function fallbackToLongPress() {
-        showStatus('💡 Нажмите и УДЕРЖИВАЙТЕ на изображении → Сохранить', 'info');
-        showToast('👇 Нажмите и удерживайте палец на фото');
+        showStatus('💡 Нажмите и УДЕРЖИВАЙТЕ на изображении', 'info');
         
         // Подсвечиваем изображение
         previewImg.style.transition = 'box-shadow 0.2s';
@@ -250,14 +256,12 @@
         
         showDebug(`Загрузка: ${file.name}, ${(file.size/1024).toFixed(0)} KB`);
         
+        currentBlob = file;
+        currentFileName = file.name.replace(/\.[^/.]+$/, '');
+        currentFileType = file.type;
+        
         const reader = new FileReader();
         reader.onload = (e) => {
-            // Сохраняем Blob для сохранения
-            currentBlob = file;
-            currentFileName = file.name.replace(/\.[^/.]+$/, '');
-            currentFileType = file.type;
-            
-            // Показываем превью
             previewImg.src = e.target.result;
             previewImg.style.display = 'block';
             previewPlaceholder.style.display = 'none';
@@ -272,7 +276,7 @@
         reader.readAsDataURL(file);
     }
     
-    // Загрузка изображения
+    // Загрузка
     uploadZone.addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -293,24 +297,26 @@
         previewImg.src = '';
         previewPlaceholder.style.display = 'flex';
         fileInfoDiv.style.display = 'none';
-        showStatus('🔄 Изображение сброшено', 'info');
+        showStatus('🔄 Сброшено', 'info');
         showDebug('Сброшено');
     });
     
-    // Проверка окружения
+    // Проверка
     setTimeout(() => {
         if (typeof Capacitor !== 'undefined') {
             const platform = Capacitor.getPlatform();
-            const plugins = Object.keys(Capacitor.Plugins || {}).join(', ') || 'нет';
-            showDebug(`✅ Capacitor ${platform} | Плагины: ${plugins}`);
+            const plugins = Object.keys(Capacitor.Plugins || {}).join(', ');
+            showDebug(`✅ Capacitor ${platform} | Плагины: ${plugins || 'нет'}`);
             
-            if (!Capacitor.Plugins.Share) {
-                showDebug('⚠️ Плагин Share не найден, будет долгое нажатие');
+            if (Capacitor.Plugins && Capacitor.Plugins.Filesystem && Capacitor.Plugins.Share) {
+                showDebug('✅ Все плагины готовы!');
+            } else {
+                showDebug('⚠️ Плагины не все загружены');
             }
         } else {
             showDebug('🌐 Веб-режим');
         }
-    }, 500);
+    }, 1000);
 })();
 </script>
 </body>
