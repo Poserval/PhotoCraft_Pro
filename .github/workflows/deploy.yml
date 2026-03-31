@@ -1,54 +1,29 @@
-name: Build APK
+name: Build and Deploy
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v3
         with:
           node-version: '20'
           
-      - name: Install dependencies
+      - name: Install and Build
         run: |
-          npm install @capacitor/cli @capacitor/core @capacitor/android
-          npm install @capacitor/filesystem @capacitor/share
-          
-      - name: Clean old android
-        run: rm -rf android
-          
-      - name: Initialize Capacitor
-        run: npx cap init PhotoCraftPro com.photocraft.pro --web-dir=docs
-          
-      - name: Add Android platform
-        run: npx cap add android
-          
-      - name: Sync Capacitor
-        run: npx cap sync android
-          
-      - name: Setup Java
-        uses: actions/setup-java@v4
+          cd frontend
+          npm install
+          npm run build
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          
-      - name: Build APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
-          
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: PhotoCraftPro
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          publish_branch: gh-pages
+          force_orphan: true
