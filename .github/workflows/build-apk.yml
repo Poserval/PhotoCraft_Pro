@@ -18,39 +18,14 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Create Capacitor project with all files
+      - name: Install Capacitor
         run: |
-          mkdir temp
-          cd temp
+          npm install -g @capacitor/cli@5.7.8
           
-          npm init -y
-          
-          # Только необходимые пакеты
-          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8 @capacitor/cli@5.7.8
-          npm install @capacitor/filesystem@5.0.0
-          
-          npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=../docs
+      - name: Init Capacitor project
+        run: |
+          npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
           npx cap add android
-          
-          cp -r android ../android
-          cp -r node_modules ../node_modules
-          cp package.json ../package.json
-          cp package-lock.json ../package-lock.json 2>/dev/null || true
-          
-          cd ..
-          rm -rf temp
-          
-      - name: Check Capacitor plugins
-        run: |
-          echo "=== Проверка установленных плагинов ==="
-          ls -la node_modules/@capacitor/ || echo "Нет папки @capacitor"
-          echo "=== Проверка capacitor.config.json ==="
-          cat android/app/src/main/assets/capacitor.config.json 2>/dev/null || echo "Файл не найден"
-          
-      - name: Add permissions for Android 13+
-        run: |
-          sed -i '/<application/i\    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
-          echo "✅ Разрешения добавлены"
           
       - name: Copy our icons to Android project
         run: |
@@ -76,26 +51,6 @@ jobs:
           
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp docs/assets/icon-app-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          
-      - name: Create capacitor.config.json
-        run: |
-          cat > capacitor.config.json << 'EOF'
-          {
-            "appId": "com.photocraft.pro",
-            "appName": "PhotoCraftPro",
-            "webDir": "docs",
-            "server": {
-              "androidScheme": "https"
-            },
-            "plugins": {
-              "Filesystem": {
-                "android": {
-                  "allowUploads": true
-                }
-              }
-            }
-          }
-          EOF
           
       - name: Sync Capacitor
         run: npx cap sync android
