@@ -1,17 +1,12 @@
 {
   "name": "photocraft-pro",
   "version": "1.0.0",
-  "description": "AI Photo Editor",
-  "scripts": {
-    "build": "echo 'Build complete'"
+  "private": true,
+  "devDependencies": {
+    "@capacitor/cli": "5.7.8"
   },
   "dependencies": {
     "@capacitor/android": "5.7.8",
-    "@capacitor/core": "5.7.8",
-    "@capacitor/filesystem": "5.2.3",
-    "@capacitor/share": "5.2.3"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "5.7.8"
+    "@capacitor/core": "5.7.8"
   }
 }
