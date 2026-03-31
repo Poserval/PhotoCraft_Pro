@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PhotoCraft Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 { text-align: center; margin-bottom: 16px; color: #1f2937; }
+        .preview-area {
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 20px;
+            aspect-ratio: 3 / 4;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .preview-placeholder { text-align: center; color: #6b7280; }
+        .preview-placeholder-icon { font-size: 48px; margin-bottom: 8px; }
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .file-info {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .save-btn {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .reset-btn {
+            width: 100%;
+            padding: 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+        .status.success { background: #d1fae5; color: #065f46; display: block; }
+        .status.info { background: #dbeafe; color: #1e40af; display: block; }
+        .status.error { background: #fee2e2; color: #991b1b; display: block; }
+        .debug-info {
+            margin-top: 16px;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #6b7280;
+            text-align: center;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📸 PhotoCraft Pro</h2>
+    
+    <div id="uploadZone" class="preview-area">
+        <div id="previewPlaceholder" class="preview-placeholder">
+            <div class="preview-placeholder-icon">📸</div>
+            <div>Нажмите для загрузки</div>
+        </div>
+        <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
+    </div>
+    <div id="fileInfo" class="file-info" style="display: none;"></div>
+
+    <button class="save-btn" id="saveBtn">💾 СОХРАНИТЬ</button>
+    <button class="reset-btn" id="resetBtn">↺ Сбросить</button>
+    
+    <div id="status" class="status"></div>
+    <div id="debugInfo" class="debug-info">Инициализация...</div>
+</div>
+
+<script>
+(function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const previewImg = document.getElementById('previewImg');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const fileInfoDiv = document.getElementById('fileInfo');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusDiv = document.getElementById('status');
+    const debugInfo = document.getElementById('debugInfo');
+    
+    let currentBlob = null;
+    let currentFileName = 'photo';
+    let currentFileType = 'image/png';
+    
+    function showStatus(message, type = 'success') {
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.style.display = 'block';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 4000);
+    }
+    
+    function showDebug(message) {
+        debugInfo.innerHTML = message;
+        console.log('[DEBUG]', message);
+    }
+    
+    async function saveImage() {
+        if (!currentBlob) {
+            showStatus('❌ Сначала загрузите изображение', 'error');
+            return;
+        }
+        
+        showStatus('⏳ Сохранение...', 'info');
+        
+        try {
+            const isCapacitor = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
+            showDebug(`Режим: ${isCapacitor ? 'APK' : 'Веб'}`);
+            
+            if (isCapacitor && Capacitor.Plugins && Capacitor.Plugins.Filesystem && Capacitor.Plugins.Share) {
+                // APK: сохраняем через Filesystem, потом открываем Share
+                const { Filesystem, Share } = Capacitor.Plugins;
+                
+                // Конвертируем Blob в base64
+                const base64 = await blobToBase64(currentBlob);
+                // Убираем префикс data:image/...;base64,
+                const pureBase64 = base64.split(',')[1];
+                
+                const fileName = `photocraft_${Date.now()}.png`;
+                showDebug(`Сохраняем файл: ${fileName}`);
+                
+                // Сохраняем в кэш
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: pureBase64,
+                    directory: Filesystem.Directory.Cache
+                });
+                
+                // Получаем URI
+                const uri = await Filesystem.getUri({
+                    path: fileName,
+                    directory: Filesystem.Directory.Cache
+                });
+                
+                showDebug(`URI: ${uri.uri}`);
+                
+                // Открываем системное меню
+                await Share.share({
+                    title: 'Сохранить фото',
+                    text: 'PhotoCraft Pro',
+                    url: uri.uri
+                });
+                
+                showStatus('✅ Меню открыто! Выберите "Сохранить"', 'success');
+                
+                // Удаляем временный файл через 10 секунд
+                setTimeout(async () => {
+                    try {
+                        await Filesystem.deleteFile({
+                            path: fileName,
+                            directory: Filesystem.Directory.Cache
+                        });
+                        showDebug('Временный файл удалён');
+                    } catch(e) {}
+                }, 10000);
+                
+            } else if (isCapacitor) {
+                // APK без плагинов
+                showDebug('Плагины не загружены');
+                fallbackToLongPress();
+            } else {
+                // Веб-версия
+                const url = URL.createObjectURL(currentBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${currentFileName}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showStatus('✅ Файл сохранён!', 'success');
+            }
+            
+        } catch (error) {
+            console.error('Save error:', error);
+            showDebug(`Ошибка: ${error.message}`);
+            fallbackToLongPress();
+        }
+    }
+    
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+    
+    function fallbackToLongPress() {
+        showStatus('💡 Нажмите и УДЕРЖИВАЙТЕ на изображении', 'info');
+        
+        // Подсвечиваем изображение
+        previewImg.style.transition = 'box-shadow 0.2s';
+        previewImg.style.boxShadow = '0 0 0 3px #3b82f6, 0 0 0 6px rgba(59,130,246,0.3)';
+        previewImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        setTimeout(() => {
+            previewImg.style.boxShadow = '';
+        }, 3000);
+    }
+    
+    function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            showStatus('❌ Выберите изображение', 'error');
+            return;
+        }
+        
+        showDebug(`Загрузка: ${file.name}, ${(file.size/1024).toFixed(0)} KB`);
+        
+        currentBlob = file;
+        currentFileName = file.name.replace(/\.[^/.]+$/, '');
+        currentFileType = file.type;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+            
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            fileInfoDiv.style.display = 'block';
+            fileInfoDiv.innerHTML = `📷 ${file.name} • ${sizeMB} MB`;
+            
+            showStatus('✅ Изображение загружено!', 'success');
+            showDebug(`Готово: ${file.name}`);
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // Загрузка
+    uploadZone.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+        };
+        input.click();
+    });
+    
+    // Сохранение
+    saveBtn.addEventListener('click', saveImage);
+    
+    // Сброс
+    resetBtn.addEventListener('click', () => {
+        currentBlob = null;
+        previewImg.style.display = 'none';
+        previewImg.src = '';
+        previewPlaceholder.style.display = 'flex';
+        fileInfoDiv.style.display = 'none';
+        showStatus('🔄 Сброшено', 'info');
+        showDebug('Сброшено');
+    });
+    
+    // Проверка
+    setTimeout(() => {
+        if (typeof Capacitor !== 'undefined') {
+            const platform = Capacitor.getPlatform();
+            const plugins = Object.keys(Capacitor.Plugins || {}).join(', ');
+            showDebug(`✅ Capacitor ${platform} | Плагины: ${plugins || 'нет'}`);
+            
+            if (Capacitor.Plugins && Capacitor.Plugins.Filesystem && Capacitor.Plugins.Share) {
+                showDebug('✅ Все плагины готовы!');
+            } else {
+                showDebug('⚠️ Плагины не все загружены');
+            }
+        } else {
+            showDebug('🌐 Веб-режим');
+        }
+    }, 1000);
+})();
+</script>
+</body>
+</html>
