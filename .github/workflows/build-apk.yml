@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
       
       - name: Setup Node.js
@@ -18,21 +18,21 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Install Capacitor
+      - name: Install dependencies
         run: |
-          npm install
-          npx cap --version
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+          npm install @capacitor/filesystem @capacitor/share
           
-      - name: Remove old android
+      - name: Clean old android
         run: rm -rf android
           
-      - name: Init Capacitor
+      - name: Initialize Capacitor
         run: npx cap init PhotoCraftPro com.photocraft.pro --web-dir=docs
           
-      - name: Add Android
+      - name: Add Android platform
         run: npx cap add android
           
-      - name: Sync
+      - name: Sync Capacitor
         run: npx cap sync android
           
       - name: Setup Java
