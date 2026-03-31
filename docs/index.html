@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>PhotoCraft Pro — Тест сохранения</title>
+    <title>PhotoCraft Pro — Сохранение</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -17,6 +17,12 @@
             background: white;
             border-radius: 24px;
             padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 16px;
+            color: #1f2937;
         }
         .preview-area {
             background: #f3f4f6;
@@ -73,6 +79,19 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            margin-top: 8px;
+        }
+        .reset-btn {
+            width: 100%;
+            padding: 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
         }
         .status {
             margin-top: 16px;
@@ -83,12 +102,22 @@
             display: none;
         }
         .status.success { background: #d1fae5; color: #065f46; display: block; }
+        .status.info { background: #dbeafe; color: #1e40af; display: block; }
         .status.error { background: #fee2e2; color: #991b1b; display: block; }
+        .instruction {
+            margin-top: 16px;
+            padding: 12px;
+            background: #fef3c7;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #92400e;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2 style="text-align:center; margin-bottom:16px;">📸 Тест сохранения</h2>
+    <h2>📸 Сохранение изображения</h2>
     
     <div id="uploadZone" class="preview-area">
         <div id="previewPlaceholder" class="preview-placeholder">
@@ -104,8 +133,16 @@
         <input type="text" id="fileName" value="photo">
     </div>
 
-    <button class="save-btn" id="saveBtn">💾 Сохранить изображение</button>
+    <button class="save-btn" id="saveBtn">💾 Открыть для сохранения</button>
+    <button class="reset-btn" id="resetBtn">↺ Сбросить</button>
+    
     <div id="status" class="status"></div>
+    <div class="instruction">
+        📱 <strong>Как сохранить на телефоне:</strong><br>
+        1. Нажмите на изображение<br>
+        2. Удерживайте палец<br>
+        3. Выберите "Сохранить изображение"
+    </div>
 </div>
 
 <script>
@@ -115,68 +152,68 @@
     const fileInfoDiv = document.getElementById('fileInfo');
     const fileNameInput = document.getElementById('fileName');
     const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
     const statusDiv = document.getElementById('status');
     
     let currentImageData = null;
+    let currentFileExt = 'jpg';
     
-    function showStatus(message, isError = false) {
+    function showStatus(message, type = 'success') {
         statusDiv.textContent = message;
-        statusDiv.className = isError ? 'status error' : 'status success';
+        statusDiv.className = `status ${type}`;
         setTimeout(() => {
             statusDiv.style.display = 'none';
-        }, 3000);
+        }, 4000);
     }
     
-    // === ПРЯМОЕ СОХРАНЕНИЕ ЧЕРЕЗ ИСПОЛЬЗОВАНИЕ ИНТЕНТА ===
     function saveImage() {
         if (!currentImageData) {
-            showStatus('❌ Сначала загрузите изображение', true);
+            showStatus('❌ Сначала загрузите изображение', 'error');
             return;
         }
         
         const fileName = fileNameInput.value.trim() || 'photo';
         
-        // Создаём объект Blob из base64
-        const byteCharacters = atob(currentImageData.split(',')[1]);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+        showStatus('⏳ Подготовка изображения...', 'info');
         
-        // Создаём ссылку на файл
-        const url = URL.createObjectURL(blob);
+        // Создаём ссылку на изображение
+        const link = document.createElement('a');
+        link.href = currentImageData;
+        link.download = `${fileName}.${currentFileExt}`;
         
-        // Для Android WebView: пробуем открыть Intent через специальный протокол
-        // Это единственный способ вызвать системное окно сохранения
-        const intentUrl = `intent://${url}#Intent;scheme=file;action=android.intent.action.VIEW;type=image/jpeg;end`;
+        // Пробуем открыть в новой вкладке
+        const newWindow = window.open(currentImageData, '_blank');
         
-        // Показываем сообщение, что нужно сохранить вручную
-        showStatus('⚠️ Нажмите и удерживайте изображение → "Сохранить изображение"', false);
-        
-        // Открываем изображение в новом окне
-        const newWindow = window.open(url, '_blank');
         if (newWindow) {
-            setTimeout(() => {
-                newWindow.close();
-            }, 1000);
+            showStatus('✅ Изображение открыто. Нажмите и удерживайте для сохранения', 'success');
+        } else {
+            // Если не открылось, показываем ссылку
+            showStatus('⚠️ Нажмите на ссылку для сохранения', 'info');
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = 'position:fixed; bottom:20px; left:20px; right:20px; background:#1f2937; color:white; padding:12px; border-radius:12px; text-align:center; z-index:9999;';
+            tempDiv.innerHTML = `<a href="${currentImageData}" download="${fileName}.${currentFileExt}" style="color:white; text-decoration:underline;">📥 Нажмите здесь, чтобы сохранить</a>`;
+            document.body.appendChild(tempDiv);
+            setTimeout(() => tempDiv.remove(), 10000);
         }
-        
-        URL.revokeObjectURL(url);
     }
     
     function updatePreview(dataUrl, name, size, format) {
         currentImageData = dataUrl;
+        currentFileExt = format.toLowerCase();
         previewImg.src = dataUrl;
         previewImg.style.display = 'block';
         previewPlaceholder.style.display = 'none';
         fileInfoDiv.style.display = 'block';
         fileInfoDiv.innerText = `${name} • ${(size/1024/1024).toFixed(2)} MB • ${format}`;
+        showStatus('✅ Изображение загружено', 'success');
     }
     
     function handleFile(file) {
-        if (!file || !file.type.startsWith('image/')) return;
+        if (!file || !file.type.startsWith('image/')) {
+            showStatus('❌ Пожалуйста, выберите изображение', 'error');
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (e) => {
             const format = file.type.split('/')[1].toUpperCase();
@@ -196,6 +233,14 @@
     });
     
     saveBtn.addEventListener('click', saveImage);
+    
+    resetBtn.addEventListener('click', () => {
+        currentImageData = null;
+        previewImg.style.display = 'none';
+        previewPlaceholder.style.display = 'flex';
+        fileInfoDiv.style.display = 'none';
+        showStatus('🔄 Изображение сброшено', 'info');
+    });
 </script>
 </body>
 </html>
