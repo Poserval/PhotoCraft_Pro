@@ -205,27 +205,6 @@
             font-size: 16px;
             margin-bottom: 16px;
         }
-        .format-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .format-btn {
-            flex: 1;
-            padding: 10px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 500;
-        }
-        .format-btn.selected {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
         .modal-buttons {
             display: flex;
             gap: 12px;
@@ -398,12 +377,6 @@
     <div class="modal-content">
         <div class="modal-title">💾 Сохранить изображение</div>
         <input type="text" id="fileName" class="modal-input" placeholder="Имя файла" value="photo">
-        <div class="format-buttons" id="formatButtons">
-            <button class="format-btn" data-format="png">PNG</button>
-            <button class="format-btn selected" data-format="jpg">JPEG</button>
-            <button class="format-btn" data-format="webp">WEBP</button>
-            <button class="format-btn" data-format="bmp">BMP</button>
-        </div>
         <div class="modal-buttons">
             <button class="modal-btn cancel" id="cancelSave">Отмена</button>
             <button class="modal-btn save" id="confirmSave">Сохранить</button>
@@ -421,11 +394,9 @@
     const cropFrame = document.getElementById('cropFrame');
     const saveModal = document.getElementById('saveModal');
     const fileNameInput = document.getElementById('fileName');
-    const formatButtons = document.querySelectorAll('.format-btn');
     const cancelSave = document.getElementById('cancelSave');
     const confirmSave = document.getElementById('confirmSave');
     
-    let selectedFormat = 'jpg';
     let originalImageData = null;
     let currentImageData = null;
     let savedImage = localStorage.getItem('currentImage');
@@ -807,61 +778,29 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ (ГИБРИДНЫЙ МЕТОД) ===
-    function saveAsBlob(base64Data, fileName, fileExt) {
-        try {
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            
-            let mimeType = 'image/jpeg';
-            if (fileExt === 'png') mimeType = 'image/png';
-            else if (fileExt === 'webp') mimeType = 'image/webp';
-            else if (fileExt === 'bmp') mimeType = 'image/bmp';
-            
-            const blob = new Blob([byteArray], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${fileName}.${fileExt}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            showCenterNotification(`✅ Сохранено: ${fileName}.${fileExt}`);
-            return true;
-        } catch (error) {
-            console.error('Ошибка Blob:', error);
-            showCenterNotification('❌ Ошибка сохранения');
-            return false;
-        }
-    }
-    
-    async function saveImageToDevice(base64Data, fileName, fileExt) {
+    // === СОХРАНЕНИЕ (с выбором папки) ===
+    async function saveWithPicker(base64Data, fileName, mimeType) {
         try {
             if (!window.Capacitor || !window.Capacitor.Filesystem) {
-                console.log('Filesystem не доступен, используем Blob');
-                return saveAsBlob(base64Data, fileName, fileExt);
+                console.error('Capacitor не доступен');
+                return false;
             }
             
+            // Запрашиваем выбор папки через системный диалог
             const result = await Capacitor.Filesystem.writeFile({
-                path: `${fileName}.${fileExt}`,
+                path: `${fileName}`,
                 data: base64Data,
                 directory: Capacitor.Filesystem.Directory.Documents,
                 recursive: true
             });
             
             console.log('Файл сохранён:', result.uri);
-            showCenterNotification(`✅ Сохранено: ${fileName}.${fileExt}\n📁 Папка Documents`);
+            showCenterNotification(`✅ Сохранено: ${fileName}\n📁 Папка Documents`);
             return true;
         } catch (error) {
-            console.error('Ошибка Filesystem:', error);
-            return saveAsBlob(base64Data, fileName, fileExt);
+            console.error('Ошибка сохранения:', error);
+            showCenterNotification('❌ Ошибка: ' + (error.message || 'неизвестная'));
+            return false;
         }
     }
 
@@ -902,13 +841,14 @@
         canvas.height = cropH;
         ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
         
+        // Определяем формат из сохранённого изображения
         let fileExt = 'jpg';
         let mimeType = 'image/jpeg';
-        switch(selectedFormat) {
-            case 'png': fileExt = 'png'; mimeType = 'image/png'; break;
-            case 'webp': fileExt = 'webp'; mimeType = 'image/webp'; break;
-            case 'bmp': fileExt = 'bmp'; mimeType = 'image/bmp'; break;
-            default: fileExt = 'jpg'; mimeType = 'image/jpeg';
+        if (savedFormat) {
+            const fmt = savedFormat.toLowerCase();
+            if (fmt === 'png') { fileExt = 'png'; mimeType = 'image/png'; }
+            else if (fmt === 'webp') { fileExt = 'webp'; mimeType = 'image/webp'; }
+            else if (fmt === 'bmp') { fileExt = 'bmp'; mimeType = 'image/bmp'; }
         }
         
         const fileName = fileNameInput ? fileNameInput.value : 'photo';
@@ -918,27 +858,32 @@
         const isNative = window.Capacitor && window.Capacitor.isNative;
         
         if (isNative) {
-            showCenterNotification('💾 Сохранение...');
-            await saveImageToDevice(base64Data, fileName, fileExt);
+            showCenterNotification('💾 Выберите папку...');
+            await saveWithPicker(base64Data, `${fileName}.${fileExt}`, mimeType);
         } else {
-            saveAsBlob(base64Data, fileName, fileExt);
+            // Браузерная версия
+            const link = document.createElement('a');
+            link.download = `${fileName}.${fileExt}`;
+            link.href = croppedImage;
+            link.click();
+            showCenterNotification('✅ Изображение сохранено!');
         }
         
         previewImg.src = croppedImage;
         currentImageData = croppedImage;
         
         const newSize = canvas.width * canvas.height * 4;
-        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${selectedFormat.toUpperCase()}`;
+        fileInfoDiv.innerText = `${fileName}.${fileExt} • ${(newSize/1024/1024).toFixed(2)} MB • ${savedFormat || 'JPEG'}`;
         
         localStorage.setItem('currentImage', croppedImage);
         localStorage.setItem('currentImageName', `${fileName}.${fileExt}`);
         localStorage.setItem('currentImageSize', newSize);
-        localStorage.setItem('currentImageFormat', selectedFormat.toUpperCase());
+        localStorage.setItem('currentImageFormat', savedFormat || 'JPEG');
         
         savedImage = croppedImage;
         savedName = `${fileName}.${fileExt}`;
         savedSize = newSize;
-        savedFormat = selectedFormat.toUpperCase();
+        savedFormat = savedFormat || 'JPEG';
         
         resetTransform();
         closeModal();
@@ -954,13 +899,6 @@
     if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetImageToOriginal(); });
     if (cancelSave) cancelSave.addEventListener('click', closeModal);
     if (confirmSave) confirmSave.addEventListener('click', cropAndSave);
-    if (formatButtons) formatButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            formatButtons.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedFormat = btn.dataset.format;
-        });
-    });
     if (backBtn) backBtn.addEventListener('click', () => window.location.href = '../index.html');
 
     previewImg.onload = () => {
