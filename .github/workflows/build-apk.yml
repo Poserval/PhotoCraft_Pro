@@ -23,6 +23,9 @@ jobs:
           npm install -g @capacitor/cli@5.7.8
           npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
           
+      - name: Remove old Android project if exists
+        run: rm -rf android
+          
       - name: Init Capacitor project
         run: |
           npx cap init "PhotoCraftPro" "com.photocraft.pro" --web-dir=docs
@@ -81,3 +84,4 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           compression-level: 0
           if-no-files-found: error
+          
