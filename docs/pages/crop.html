@@ -807,25 +807,34 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ С ПРОВЕРКОЙ FILESYSTEM ===
-    async function saveImageToDownloads(base64Data, fileName, fileExt) {
+    // === СОХРАНЕНИЕ ЧЕРЕЗ BLOB И A.DOWNLOAD (РАБОТАЕТ В APK WEBVIEW) ===
+    function saveAsBlob(base64Data, fileName, fileExt) {
         try {
-            // Проверяем, что Capacitor и Filesystem доступны
-            if (!window.Capacitor || !window.Capacitor.Filesystem) {
-                console.error('Capacitor.Filesystem не доступен');
-                showCenterNotification('❌ Ошибка: Filesystem не доступен');
-                return false;
+            // Преобразуем base64 в двоичные данные
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
             }
+            const byteArray = new Uint8Array(byteNumbers);
             
-            // Сохраняем в папку Documents (доступна на Android)
-            const result = await Capacitor.Filesystem.writeFile({
-                path: `${fileName}.${fileExt}`,
-                data: base64Data,
-                directory: Capacitor.Filesystem.Directory.Documents,
-                recursive: true
-            });
+            // Определяем MIME тип
+            let mimeType = 'image/jpeg';
+            if (fileExt === 'png') mimeType = 'image/png';
+            else if (fileExt === 'webp') mimeType = 'image/webp';
+            else if (fileExt === 'bmp') mimeType = 'image/bmp';
             
-            console.log('Файл сохранён:', result.uri);
+            const blob = new Blob([byteArray], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${fileName}.${fileExt}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
             showCenterNotification(`✅ Сохранено: ${fileName}.${fileExt}`);
             return true;
         } catch (error) {
@@ -885,19 +894,8 @@
         const croppedImage = canvas.toDataURL(mimeType, 0.92);
         const base64Data = croppedImage.split(',')[1];
         
-        // Проверяем, запущено ли в Capacitor (APK)
-        const isNative = window.Capacitor && window.Capacitor.isNative;
-        
-        if (isNative) {
-            showCenterNotification('💾 Сохранение...');
-            await saveImageToDownloads(base64Data, fileName, fileExt);
-        } else {
-            const link = document.createElement('a');
-            link.download = `${fileName}.${fileExt}`;
-            link.href = croppedImage;
-            link.click();
-            showCenterNotification('✅ Изображение сохранено!');
-        }
+        // Сохраняем через Blob (работает в браузере и в WebView APK)
+        saveAsBlob(base64Data, fileName, fileExt);
         
         previewImg.src = croppedImage;
         currentImageData = croppedImage;
