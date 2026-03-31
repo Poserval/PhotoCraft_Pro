@@ -98,6 +98,7 @@
             color: #6b7280;
             text-align: center;
             font-family: monospace;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -118,200 +119,173 @@
     <button class="reset-btn" id="resetBtn">↺ Сбросить</button>
     
     <div id="status" class="status"></div>
-    <div id="debugInfo" class="debug-info"></div>
+    <div id="debugInfo" class="debug-info">Загрузка...</div>
 </div>
 
 <script>
-// Ждём полной загрузки Capacitor
-document.addEventListener('deviceready', onDeviceReady, false);
-window.addEventListener('DOMContentLoaded', onDeviceReady);
-
-let isNative = false;
-let currentImageData = null;
-let currentFileName = 'photo';
-let currentFileFormat = 'png';
-
-const uploadZone = document.getElementById('uploadZone');
-const previewImg = document.getElementById('previewImg');
-const previewPlaceholder = document.getElementById('previewPlaceholder');
-const fileInfoDiv = document.getElementById('fileInfo');
-const saveBtn = document.getElementById('saveBtn');
-const resetBtn = document.getElementById('resetBtn');
-const statusDiv = document.getElementById('status');
-const debugInfo = document.getElementById('debugInfo');
-
-function showStatus(message, type = 'success') {
-    statusDiv.textContent = message;
-    statusDiv.className = `status ${type}`;
-    statusDiv.style.display = 'block';
+(function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const previewImg = document.getElementById('previewImg');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const fileInfoDiv = document.getElementById('fileInfo');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusDiv = document.getElementById('status');
+    const debugInfo = document.getElementById('debugInfo');
+    
+    let currentBase64 = null;  // полный base64 с префиксом
+    let currentFileName = 'photo';
+    let currentFileType = 'image/png';
+    
+    function showStatus(message, type = 'success') {
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.style.display = 'block';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 4000);
+    }
+    
+    function showDebug(message) {
+        debugInfo.innerHTML = message;
+        console.log('[DEBUG]', message);
+    }
+    
+    // ГЛАВНАЯ ФУНКЦИЯ СОХРАНЕНИЯ
+    async function saveImage() {
+        if (!currentBase64) {
+            showStatus('❌ Сначала загрузите изображение', 'error');
+            return;
+        }
+        
+        showStatus('⏳ Открываю меню сохранения...', 'info');
+        
+        try {
+            // Проверяем, в Capacitor ли мы
+            const isCapacitor = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
+            showDebug(`Режим: ${isCapacitor ? 'APK (Capacitor)' : 'Веб'}`);
+            
+            if (isCapacitor && Capacitor.Plugins && Capacitor.Plugins.Share) {
+                // APK: используем системное меню Share
+                showDebug('Использую Capacitor Share...');
+                
+                await Capacitor.Plugins.Share.share({
+                    title: 'Сохранить фото',
+                    text: 'PhotoCraft Pro',
+                    url: currentBase64
+                });
+                
+                showStatus('✅ Меню открыто! Выберите "Сохранить" или "Скачать"', 'success');
+                
+            } else if (isCapacitor) {
+                // APK но Share не доступен
+                showDebug('Capacitor есть, но Share не найден');
+                showStatus('💡 Нажмите и удерживайте на изображении → Сохранить', 'info');
+                
+                // Подсвечиваем изображение
+                previewImg.style.boxShadow = '0 0 0 3px #3b82f6';
+                previewImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => {
+                    previewImg.style.boxShadow = '';
+                }, 2000);
+                
+            } else {
+                // Веб-версия: обычное сохранение
+                showDebug('Веб-версия: download');
+                const link = document.createElement('a');
+                link.href = currentBase64;
+                link.download = `${currentFileName}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showStatus('✅ Файл сохранён!', 'success');
+            }
+            
+        } catch (error) {
+            console.error('Save error:', error);
+            showDebug(`Ошибка: ${error.message}`);
+            showStatus(`❌ Ошибка: ${error.message}`, 'error');
+            
+            // Fallback: показываем инструкцию
+            showStatus('💡 Нажмите и удерживайте на изображении → Сохранить изображение', 'info');
+            previewImg.style.boxShadow = '0 0 0 3px #ef4444';
+            previewImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                previewImg.style.boxShadow = '';
+            }, 2000);
+        }
+    }
+    
+    function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            showStatus('❌ Выберите изображение', 'error');
+            return;
+        }
+        
+        showDebug(`Загрузка: ${file.name}, ${(file.size/1024).toFixed(0)} KB`);
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentBase64 = e.target.result;
+            currentFileName = file.name.replace(/\.[^/.]+$/, '');
+            currentFileType = file.type;
+            
+            // Показываем превью
+            previewImg.src = currentBase64;
+            previewImg.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+            
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            fileInfoDiv.style.display = 'block';
+            fileInfoDiv.innerHTML = `📷 ${file.name} • ${sizeMB} MB`;
+            
+            showStatus('✅ Изображение загружено! Нажмите "СОХРАНИТЬ"', 'success');
+            showDebug(`Готово! Тип: ${currentFileType}`);
+        };
+        reader.onerror = () => {
+            showStatus('❌ Ошибка чтения файла', 'error');
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // Загрузка изображения
+    uploadZone.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+        };
+        input.click();
+    });
+    
+    // Кнопка сохранения
+    saveBtn.addEventListener('click', saveImage);
+    
+    // Кнопка сброса
+    resetBtn.addEventListener('click', () => {
+        currentBase64 = null;
+        previewImg.style.display = 'none';
+        previewImg.src = '';
+        previewPlaceholder.style.display = 'flex';
+        fileInfoDiv.style.display = 'none';
+        showStatus('🔄 Изображение сброшено', 'info');
+        showDebug('Сброшено');
+    });
+    
+    // Проверяем окружение при старте
     setTimeout(() => {
-        statusDiv.style.display = 'none';
-    }, 4000);
-}
-
-function showDebug(message) {
-    debugInfo.innerHTML = message;
-    console.log(message);
-}
-
-function onDeviceReady() {
-    // Проверяем, работаем ли в Capacitor
-    if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
-        isNative = true;
-        showDebug('✅ Режим: APK (Capacitor)');
-        showStatus('Приложение готово к работе!', 'success');
-    } else {
-        isNative = false;
-        showDebug('🌐 Режим: Веб-версия');
-        showStatus('Веб-версия: сохранение через download', 'info');
-    }
-}
-
-// ГЛАВНАЯ ФУНКЦИЯ СОХРАНЕНИЯ
-async function saveImageNative() {
-    if (!currentImageData) {
-        showStatus('❌ Сначала загрузите изображение', 'error');
-        return;
-    }
-    
-    showStatus('⏳ Подготовка к сохранению...', 'info');
-    
-    try {
+        const isCapacitor = typeof Capacitor !== 'undefined';
+        const isNative = isCapacitor && Capacitor.isNativePlatform();
         if (isNative) {
-            // Нативное сохранение через Capacitor
-            showDebug('Использую Capacitor плагины...');
-            
-            // Проверяем доступность плагинов
-            if (!window.Capacitor || !window.Capacitor.Plugins) {
-                throw new Error('Capacitor плагины не загружены');
-            }
-            
-            const { Filesystem, Share } = window.Capacitor.Plugins;
-            
-            if (!Filesystem || !Share) {
-                throw new Error('Плагины Filesystem или Share не найдены');
-            }
-            
-            const fileName = `${Date.now()}_${currentFileName}.${currentFileFormat}`;
-            showDebug(`Сохраняю файл: ${fileName}`);
-            
-            // Сохраняем во временную папку
-            await Filesystem.writeFile({
-                path: fileName,
-                data: currentImageData,
-                directory: Filesystem.Directory.Cache
-            });
-            
-            // Получаем URI
-            const uri = await Filesystem.getUri({
-                path: fileName,
-                directory: Filesystem.Directory.Cache
-            });
-            
-            showDebug(`URI: ${uri.uri}`);
-            
-            // Вызываем системное меню
-            await Share.share({
-                title: 'Сохранить фото',
-                text: 'PhotoCraft Pro',
-                url: uri.uri
-            });
-            
-            showStatus('✅ Системное меню открыто!', 'success');
-            
-            // Удаляем временный файл
-            setTimeout(async () => {
-                try {
-                    await Filesystem.deleteFile({
-                        path: fileName,
-                        directory: Filesystem.Directory.Cache
-                    });
-                } catch(e) {}
-            }, 5000);
-            
+            showDebug('✅ APK режим. Плагины: ' + Object.keys(Capacitor.Plugins || {}).join(', '));
+        } else if (isCapacitor) {
+            showDebug('⚠️ Capacitor загружен, но не native?');
         } else {
-            // Веб-версия
-            const link = document.createElement('a');
-            link.href = `data:image/${currentFileFormat};base64,${currentImageData}`;
-            link.download = `${currentFileName}.${currentFileFormat}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showStatus('✅ Файл сохранён!', 'success');
+            showDebug('🌐 Веб-режим');
         }
-        
-    } catch (error) {
-        console.error('Save error:', error);
-        showDebug(`Ошибка: ${error.message}`);
-        showStatus(`❌ Ошибка: ${error.message}`, 'error');
-        
-        // Если нативное сохранение не сработало, предлагаем альтернативу
-        if (isNative) {
-            showStatus('💡 Попробуйте нажать и удерживать на изображении', 'info');
-        }
-    }
-}
-
-function handleFile(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        showStatus('❌ Выберите изображение', 'error');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        let base64 = e.target.result;
-        // Убираем префикс
-        const base64Data = base64.split(',')[1];
-        
-        currentImageData = base64Data;
-        currentFileName = file.name.replace(/\.[^/.]+$/, '');
-        
-        let format = file.type.split('/')[1];
-        if (format === 'jpeg') format = 'jpg';
-        currentFileFormat = format.toLowerCase();
-        
-        // Показываем превью
-        previewImg.src = base64;
-        previewImg.style.display = 'block';
-        previewPlaceholder.style.display = 'none';
-        
-        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-        fileInfoDiv.style.display = 'block';
-        fileInfoDiv.innerHTML = `📷 ${file.name} • ${sizeMB} MB`;
-        
-        showStatus('✅ Изображение загружено!', 'success');
-        showDebug(`Файл: ${file.name}, тип: ${currentFileFormat}`);
-    };
-    reader.readAsDataURL(file);
-}
-
-// Загрузка изображения
-uploadZone.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-        if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
-    };
-    input.click();
-});
-
-// Кнопка сохранения
-saveBtn.addEventListener('click', saveImageNative);
-
-// Кнопка сброса
-resetBtn.addEventListener('click', () => {
-    currentImageData = null;
-    previewImg.style.display = 'none';
-    previewImg.src = '';
-    previewPlaceholder.style.display = 'flex';
-    fileInfoDiv.style.display = 'none';
-    showStatus('🔄 Изображение сброшено', 'info');
-});
-
-// Инициализация
-onDeviceReady();
+    }, 500);
+})();
 </script>
 </body>
 </html>
