@@ -21,6 +21,7 @@ jobs:
       - name: Install Capacitor
         run: |
           npm install -g @capacitor/cli@5.7.8
+          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8
           
       - name: Init Capacitor project
         run: |
