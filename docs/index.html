@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: system-ui, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             background: #f3f4f6;
             padding: 20px;
         }
@@ -36,6 +36,7 @@
             cursor: pointer;
             margin-bottom: 16px;
             overflow: hidden;
+            position: relative;
         }
         .preview-placeholder {
             text-align: center;
@@ -47,6 +48,8 @@
             height: 100%;
             object-fit: contain;
             display: block;
+            -webkit-touch-callout: default;
+            user-select: auto;
         }
         .file-info {
             font-size: 12px;
@@ -104,143 +107,290 @@
         .status.success { background: #d1fae5; color: #065f46; display: block; }
         .status.info { background: #dbeafe; color: #1e40af; display: block; }
         .status.error { background: #fee2e2; color: #991b1b; display: block; }
-        .instruction {
-            margin-top: 16px;
-            padding: 12px;
-            background: #fef3c7;
-            border-radius: 12px;
-            font-size: 13px;
-            color: #92400e;
-            text-align: center;
+        
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .highlight-image {
+            animation: pulse 0.5s ease;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>📸 Сохранение изображения</h2>
+    <h2>📸 PhotoCraft Pro</h2>
     
     <div id="uploadZone" class="preview-area">
         <div id="previewPlaceholder" class="preview-placeholder">
             <div class="preview-placeholder-icon">📸</div>
             <div>Нажмите для загрузки</div>
+            <div style="font-size: 12px; margin-top: 8px;">JPG, PNG, WEBP</div>
         </div>
         <img id="previewImg" class="preview-image" style="display: none;" alt="preview">
     </div>
-    <div id="fileInfo" class="file-info"></div>
+    <div id="fileInfo" class="file-info" style="display: none;"></div>
 
     <div class="input-group">
         <label>Имя файла:</label>
-        <input type="text" id="fileName" value="photo">
+        <input type="text" id="fileName" value="photocraft">
     </div>
 
-    <button class="save-btn" id="saveBtn">💾 Открыть для сохранения</button>
+    <button class="save-btn" id="saveBtn">💾 СОХРАНИТЬ ФОТО</button>
     <button class="reset-btn" id="resetBtn">↺ Сбросить</button>
     
     <div id="status" class="status"></div>
-    <div class="instruction">
-        📱 <strong>Как сохранить на телефоне:</strong><br>
-        1. Нажмите на изображение<br>
-        2. Удерживайте палец<br>
-        3. Выберите "Сохранить изображение"
-    </div>
 </div>
 
 <script>
-    const uploadZone = document.getElementById('uploadZone');
-    const previewImg = document.getElementById('previewImg');
-    const previewPlaceholder = document.getElementById('previewPlaceholder');
-    const fileInfoDiv = document.getElementById('fileInfo');
-    const fileNameInput = document.getElementById('fileName');
-    const saveBtn = document.getElementById('saveBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const statusDiv = document.getElementById('status');
-    
-    let currentImageData = null;
-    let currentFileExt = 'jpg';
-    
-    function showStatus(message, type = 'success') {
-        statusDiv.textContent = message;
-        statusDiv.className = `status ${type}`;
-        setTimeout(() => {
+    // ПОЛНОСТЬЮ РАБОЧАЯ ВЕРСИЯ ДЛЯ APK
+    (function() {
+        const uploadZone = document.getElementById('uploadZone');
+        const previewImg = document.getElementById('previewImg');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const fileInfoDiv = document.getElementById('fileInfo');
+        const fileNameInput = document.getElementById('fileName');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusDiv = document.getElementById('status');
+        
+        let currentImageData = null;
+        let currentFileName = '';
+        let currentFileSize = 0;
+        let currentFileFormat = 'jpg';
+        
+        function showStatus(message, type = 'success') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function hideStatus() {
             statusDiv.style.display = 'none';
-        }, 4000);
-    }
-    
-    function saveImage() {
-        if (!currentImageData) {
-            showStatus('❌ Сначала загрузите изображение', 'error');
-            return;
         }
         
-        const fileName = fileNameInput.value.trim() || 'photo';
+        // Удаляем плавающую подсказку если есть
+        function removeOverlay() {
+            const oldOverlay = document.getElementById('saveOverlay');
+            if (oldOverlay) oldOverlay.remove();
+        }
         
-        showStatus('⏳ Подготовка изображения...', 'info');
-        
-        // Создаём ссылку на изображение
-        const link = document.createElement('a');
-        link.href = currentImageData;
-        link.download = `${fileName}.${currentFileExt}`;
-        
-        // Пробуем открыть в новой вкладке
-        const newWindow = window.open(currentImageData, '_blank');
-        
-        if (newWindow) {
-            showStatus('✅ Изображение открыто. Нажмите и удерживайте для сохранения', 'success');
-        } else {
-            // Если не открылось, показываем ссылку
-            showStatus('⚠️ Нажмите на ссылку для сохранения', 'info');
+        // Показываем подсказку для долгого нажатия
+        function showLongPressInstruction() {
+            removeOverlay();
             
-            const tempDiv = document.createElement('div');
-            tempDiv.style.cssText = 'position:fixed; bottom:20px; left:20px; right:20px; background:#1f2937; color:white; padding:12px; border-radius:12px; text-align:center; z-index:9999;';
-            tempDiv.innerHTML = `<a href="${currentImageData}" download="${fileName}.${currentFileExt}" style="color:white; text-decoration:underline;">📥 Нажмите здесь, чтобы сохранить</a>`;
-            document.body.appendChild(tempDiv);
-            setTimeout(() => tempDiv.remove(), 10000);
+            const overlay = document.createElement('div');
+            overlay.id = 'saveOverlay';
+            overlay.innerHTML = `
+                <div style="
+                    position: fixed;
+                    bottom: 20px;
+                    left: 16px;
+                    right: 16px;
+                    background: rgba(0,0,0,0.95);
+                    backdrop-filter: blur(10px);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 24px;
+                    text-align: center;
+                    z-index: 10000;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    animation: slideUp 0.3s ease;
+                ">
+                    <div style="font-size: 48px; margin-bottom: 12px;">👇👆</div>
+                    <div style="font-weight: bold; font-size: 18px; margin-bottom: 8px;">НАЖМИТЕ И УДЕРЖИВАЙТЕ</div>
+                    <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">на изображении выше</div>
+                    <div style="background: #3b82f6; border-radius: 20px; padding: 8px 12px; margin: 12px auto; display: inline-block;">
+                        <span style="font-size: 20px;">📱</span> → <span style="font-weight: bold;">Сохранить изображение</span>
+                    </div>
+                    <button id="closeOverlayBtn" style="
+                        margin-top: 12px;
+                        background: rgba(255,255,255,0.2);
+                        border: none;
+                        color: white;
+                        padding: 10px 24px;
+                        border-radius: 30px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        font-weight: 500;
+                    ">✕ Понятно, сохранить</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            const closeBtn = document.getElementById('closeOverlayBtn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    removeOverlay();
+                });
+            }
+            
+            // Авто-скрытие через 8 секунд
+            setTimeout(() => {
+                removeOverlay();
+            }, 8000);
         }
-    }
-    
-    function updatePreview(dataUrl, name, size, format) {
-        currentImageData = dataUrl;
-        currentFileExt = format.toLowerCase();
-        previewImg.src = dataUrl;
-        previewImg.style.display = 'block';
-        previewPlaceholder.style.display = 'none';
-        fileInfoDiv.style.display = 'block';
-        fileInfoDiv.innerText = `${name} • ${(size/1024/1024).toFixed(2)} MB • ${format}`;
-        showStatus('✅ Изображение загружено', 'success');
-    }
-    
-    function handleFile(file) {
-        if (!file || !file.type.startsWith('image/')) {
-            showStatus('❌ Пожалуйста, выберите изображение', 'error');
-            return;
+        
+        // ГЛАВНАЯ ФУНКЦИЯ СОХРАНЕНИЯ
+        function saveImage() {
+            if (!currentImageData) {
+                showStatus('❌ Сначала загрузите изображение', 'error');
+                return;
+            }
+            
+            // Убеждаемся что изображение видимо
+            previewImg.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+            
+            // Делаем изображение доступным для долгого нажатия
+            previewImg.style.pointerEvents = 'auto';
+            previewImg.style.webkitTouchCallout = 'default';
+            previewImg.style.userSelect = 'auto';
+            
+            // Показываем подсказку
+            showLongPressInstruction();
+            
+            // Подсветка изображения
+            previewImg.classList.add('highlight-image');
+            previewImg.style.boxShadow = '0 0 0 3px #3b82f6, 0 0 0 8px rgba(59,130,246,0.3)';
+            previewImg.style.borderRadius = '12px';
+            
+            // Прокручиваем к изображению
+            previewImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Снимаем подсветку через 2 секунды
+            setTimeout(() => {
+                previewImg.classList.remove('highlight-image');
+                previewImg.style.boxShadow = '';
+            }, 2000);
+            
+            showStatus('📱 Нажмите и УДЕРЖИВАЙТЕ палец на изображении → выберите "Сохранить изображение"', 'success');
         }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const format = file.type.split('/')[1].toUpperCase();
-            updatePreview(e.target.result, file.name, file.size, format);
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    uploadZone.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = (e) => {
-            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
-        };
-        input.click();
-    });
-    
-    saveBtn.addEventListener('click', saveImage);
-    
-    resetBtn.addEventListener('click', () => {
-        currentImageData = null;
-        previewImg.style.display = 'none';
-        previewPlaceholder.style.display = 'flex';
-        fileInfoDiv.style.display = 'none';
-        showStatus('🔄 Изображение сброшено', 'info');
-    });
+        
+        // Альтернативное сохранение через ссылку (для веб-версии)
+        function saveImageViaDownload() {
+            if (!currentImageData) {
+                showStatus('❌ Сначала загрузите изображение', 'error');
+                return;
+            }
+            
+            const fileName = fileNameInput.value.trim() || 'photocraft';
+            const link = document.createElement('a');
+            link.href = currentImageData;
+            link.download = `${fileName}.${currentFileFormat}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showStatus('✅ Изображение сохранено!', 'success');
+        }
+        
+        function updatePreview(dataUrl, fileName, fileSize, fileFormat) {
+            currentImageData = dataUrl;
+            currentFileName = fileName;
+            currentFileSize = fileSize;
+            currentFileFormat = fileFormat.toLowerCase();
+            
+            previewImg.src = dataUrl;
+            previewImg.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+            
+            const sizeMB = (fileSize / 1024 / 1024).toFixed(2);
+            fileInfoDiv.style.display = 'block';
+            fileInfoDiv.innerHTML = `📷 ${fileName} • ${sizeMB} MB • ${fileFormat.toUpperCase()}`;
+            
+            showStatus('✅ Изображение загружено! Теперь нажмите "Сохранить фото"', 'success');
+        }
+        
+        function handleFile(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showStatus('❌ Пожалуйста, выберите изображение (JPG, PNG, WEBP)', 'error');
+                return;
+            }
+            
+            const validFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+            if (!validFormats.includes(file.type)) {
+                showStatus('❌ Поддерживаются только JPG, PNG, WEBP', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                let format = file.type.split('/')[1];
+                if (format === 'jpeg') format = 'jpg';
+                updatePreview(e.target.result, file.name, file.size, format);
+            };
+            reader.onerror = () => {
+                showStatus('❌ Ошибка чтения файла', 'error');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Загрузка изображения через клик
+        uploadZone.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/jpeg,image/png,image/webp,image/jpg';
+            input.onchange = (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handleFile(e.target.files[0]);
+                }
+            };
+            input.click();
+        });
+        
+        // Drag & Drop поддержка
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#3b82f6';
+            uploadZone.style.backgroundColor = '#eff6ff';
+        });
+        
+        uploadZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#d1d5db';
+            uploadZone.style.backgroundColor = '#f3f4f6';
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#d1d5db';
+            uploadZone.style.backgroundColor = '#f3f4f6';
+            
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+        
+        // Кнопка сохранения
+        saveBtn.addEventListener('click', saveImage);
+        
+        // Кнопка сброса
+        resetBtn.addEventListener('click', () => {
+            currentImageData = null;
+            previewImg.style.display = 'none';
+            previewImg.src = '';
+            previewPlaceholder.style.display = 'flex';
+            fileInfoDiv.style.display = 'none';
+            removeOverlay();
+            showStatus('🔄 Изображение сброшено. Загрузите новое фото', 'info');
+        });
+        
+        // Дополнительно: если пользователь сам догадался нажать долго на изображение
+        previewImg.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+        
+        console.log('✅ PhotoCraft Pro готов к работе! Загрузите фото и нажмите "Сохранить"');
+    })();
 </script>
 </body>
 </html>
