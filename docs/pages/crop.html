@@ -807,10 +807,9 @@
     window.addEventListener('touchend', endResize);
     window.addEventListener('mouseup', endResize);
 
-    // === СОХРАНЕНИЕ ЧЕРЕЗ BLOB И A.DOWNLOAD (РАБОТАЕТ В APK WEBVIEW) ===
+    // === СОХРАНЕНИЕ (ГИБРИДНЫЙ МЕТОД) ===
     function saveAsBlob(base64Data, fileName, fileExt) {
         try {
-            // Преобразуем base64 в двоичные данные
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -818,7 +817,6 @@
             }
             const byteArray = new Uint8Array(byteNumbers);
             
-            // Определяем MIME тип
             let mimeType = 'image/jpeg';
             if (fileExt === 'png') mimeType = 'image/png';
             else if (fileExt === 'webp') mimeType = 'image/webp';
@@ -838,9 +836,32 @@
             showCenterNotification(`✅ Сохранено: ${fileName}.${fileExt}`);
             return true;
         } catch (error) {
-            console.error('Ошибка сохранения:', error);
-            showCenterNotification('❌ Ошибка: ' + (error.message || 'неизвестная'));
+            console.error('Ошибка Blob:', error);
+            showCenterNotification('❌ Ошибка сохранения');
             return false;
+        }
+    }
+    
+    async function saveImageToDevice(base64Data, fileName, fileExt) {
+        try {
+            if (!window.Capacitor || !window.Capacitor.Filesystem) {
+                console.log('Filesystem не доступен, используем Blob');
+                return saveAsBlob(base64Data, fileName, fileExt);
+            }
+            
+            const result = await Capacitor.Filesystem.writeFile({
+                path: `${fileName}.${fileExt}`,
+                data: base64Data,
+                directory: Capacitor.Filesystem.Directory.Documents,
+                recursive: true
+            });
+            
+            console.log('Файл сохранён:', result.uri);
+            showCenterNotification(`✅ Сохранено: ${fileName}.${fileExt}\n📁 Папка Documents`);
+            return true;
+        } catch (error) {
+            console.error('Ошибка Filesystem:', error);
+            return saveAsBlob(base64Data, fileName, fileExt);
         }
     }
 
@@ -894,8 +915,14 @@
         const croppedImage = canvas.toDataURL(mimeType, 0.92);
         const base64Data = croppedImage.split(',')[1];
         
-        // Сохраняем через Blob (работает в браузере и в WebView APK)
-        saveAsBlob(base64Data, fileName, fileExt);
+        const isNative = window.Capacitor && window.Capacitor.isNative;
+        
+        if (isNative) {
+            showCenterNotification('💾 Сохранение...');
+            await saveImageToDevice(base64Data, fileName, fileExt);
+        } else {
+            saveAsBlob(base64Data, fileName, fileExt);
+        }
         
         previewImg.src = croppedImage;
         currentImageData = croppedImage;
